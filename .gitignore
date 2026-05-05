@@ -1,0 +1,45 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+
+# Virtual envs
+.venv/
+venv/
+backend/.venv/
+
+# Secrets
+.env
+backend/.env
+
+# IDE
+.idea/
+.vscode/
+
+# Temp / generated
+backend/app/temp/
+backend/app/temp/audio_responses/
+*.mp3
+
+# OS
+.DS_Store
+
+# Dependencies / builds
+node_modules/
+frontend/node_modules/
+.next/
+frontend/.next/
+
+# Temp/generated
+backend/app/temp/
+*.mp3
+*.log
+
+# Secrets
+.env
+backend/.env
+
+# Videos - do not push
+*.mp4
+frontend/public/avatar/**/*.mp4

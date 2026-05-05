@@ -1,0 +1,32 @@
+{
+  "blocked_topics": [
+    "polityka",
+    "religia",
+    "medycyna",
+    "finanse osobiste",
+    "dane prywatne"
+  ],
+  "blocked_keywords": [
+    "prezydent",
+    "wybory",
+    "partia",
+    "kościół",
+    "choroba",
+    "diagnoza",
+    "leczenie",
+    "kredyt",
+    "pesel",
+    "hasło",
+    "premier",
+    "rasizm",
+    "seks",
+    "narkotyki",
+    "używki"
+  ],
+  "blocked_patterns": [
+    "co sądzisz o",
+    "jaka jest twoja opinia",
+    "jak leczyć"
+  ],
+  "fallback_message": "Przykro mi nie jestem biegły w tym temacie, więc nie odpowiem ci na to pytanie"
+}
