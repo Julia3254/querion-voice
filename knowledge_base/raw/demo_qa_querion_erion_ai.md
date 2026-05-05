@@ -22,7 +22,7 @@ W Querionie można poznać takie atrakcje jak AI Touch, Flying Theater, Immersiv
 ## Atrakcje Querionu
 
 ### Co to jest AI Touch?
-AI Touch to interaktywna wystawa pokazująca kontakt człowieka ze sztuczną inteligencją. Pozwala w prosty sposób zobaczyć, jak technologia może reagować na użytkownika i tworzyć angażujące doświadczenie.
+AI Touch to interaktywna wystawa.
 
 ### Czym jest Flying Theater?
 Flying Theater to widowiskowe doświadczenie, które daje wrażenie lotu. Łączy obraz, ruch i efekty multimedialne, żeby uczestnik poczuł się tak, jakby naprawdę unosił się w przestrzeni.
