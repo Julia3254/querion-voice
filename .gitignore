@@ -11,7 +11,11 @@ backend/.venv/
 
 # Secrets
 .env
+.env.local
+.env.*.local
 backend/.env
+backend/.env.local
+frontend/.env.local
 
 # IDE
 .idea/
@@ -21,6 +25,7 @@ backend/.env
 backend/app/temp/
 backend/app/temp/audio_responses/
 *.mp3
+*.log
 
 # OS
 .DS_Store
@@ -30,16 +35,9 @@ node_modules/
 frontend/node_modules/
 .next/
 frontend/.next/
+dist/
+build/
 
-# Temp/generated
-backend/app/temp/
-*.mp3
-*.log
-
-# Secrets
-.env
-backend/.env
-
-# Videos - do not push
+# Videos
 *.mp4
-frontend/public/avatar/**/*.mp4
+!frontend/public/avatar/**/*.mp4

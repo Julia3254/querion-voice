@@ -249,6 +249,24 @@ export async function sendVoiceAudio(
   return response.json();
 }
 
+export async function getIdleVoice(
+  options: { sessionId?: string | null; target?: VoiceTarget } = {}
+): Promise<VoiceResponse> {
+  return fetchJson<VoiceResponse>(
+    "/voice/idle",
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        text: "idle",
+        session_id: options.sessionId ?? null,
+        target: options.target ?? "tv",
+      }),
+    },
+    "Nie udało się pobrać zwrotu idle."
+  );
+}
+
 export function backendAssetUrl(url: string | null | undefined): string | null {
   if (!url) {
     return null;

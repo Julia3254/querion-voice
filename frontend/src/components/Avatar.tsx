@@ -19,7 +19,11 @@ function videoSrc(variant: AvatarVariant, state: AvatarState) {
   return `/avatar/${variant}/${fallbackState[state]}.mp4`;
 }
 
-export default function Avatar({ state, variant = "phone", size = "phone" }: Props) {
+export default function Avatar({
+  state,
+  variant = "phone",
+  size = "phone",
+}: Props) {
   const maxWidth = size === "tv" ? 620 : 320;
 
   return (
@@ -30,9 +34,9 @@ export default function Avatar({ state, variant = "phone", size = "phone" }: Pro
         height: "100%",
         maxHeight: size === "tv" ? "76vh" : undefined,
         aspectRatio: "3 / 4",
-        borderRadius: size === "tv" ? 36 : 24,
+        borderRadius: 0,
         overflow: "hidden",
-        background: "#ffffff",
+        background: "transparent",
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
@@ -51,7 +55,7 @@ export default function Avatar({ state, variant = "phone", size = "phone" }: Pro
           height: "100%",
           objectFit: "contain",
           display: "block",
-          background: "#ffffff",
+          background: "transparent",
         }}
       />
     </div>

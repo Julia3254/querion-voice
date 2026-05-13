@@ -46,7 +46,7 @@ function PhonePageContent() {
   } = useAudioRecorder();
 
   const pageTitle = useMemo(() => {
-    return isTvMicMode ? "Mikrofon TV" : "Zabierz Eriona ze sobą";
+    return isTvMicMode ? "Mikrofon TV" : "Zabierz Querę ze sobą";
   }, [isTvMicMode]);
 
   const stopAudioPlayback = () => {
@@ -65,7 +65,7 @@ function PhonePageContent() {
 
     audio.onplay = () => {
       setAvatarState("speaking");
-      setStatusText("Erion odpowiada głosowo...");
+      setStatusText("Quera odpowiada głosowo...");
     };
 
     audio.onended = () => {
@@ -110,7 +110,7 @@ function PhonePageContent() {
     } else if (status.queue_position) {
       setStatusText(`Jesteś w kolejce. Twoje miejsce: ${status.queue_position}.`);
     } else {
-      setStatusText("TV odpowiada. Poczekaj chwilę.");
+      setStatusText("Erion odpowiada. Poczekaj chwilę.");
     }
   };
 
@@ -209,7 +209,7 @@ function PhonePageContent() {
       setAvatarState("listening");
       setStatusText(
         isTvMicMode
-          ? "Mów do avatara na TV. Kliknij drugi raz, żeby wysłać."
+          ? "Mów do telefonu. Kliknij drugi raz, żeby wysłać pytanie do Eriona."
           : "Mów teraz. Kliknij drugi raz, żeby wysłać."
       );
 
@@ -257,7 +257,7 @@ function PhonePageContent() {
     try {
       setIsProcessing(true);
       setAvatarState("thinking");
-      setStatusText(isTvMicMode ? "Avatar na TV myśli..." : "Erion myśli...");
+      setStatusText(isTvMicMode ? "Erion myśli..." : "Quera myśli...");
 
       if (isTvMicMode) {
         void setSessionState(sessionId, "thinking", "tv").catch(() => {});
@@ -281,7 +281,7 @@ function PhonePageContent() {
       }
 
       if (isTvMicMode) {
-        setStatusText("Odpowiedź powinna odtworzyć się na TV.");
+        setStatusText("Odpowiedź Eriona odtworzy się na TV.");
         setAvatarState("waiting");
 
         window.setTimeout(() => {
@@ -347,7 +347,7 @@ function PhonePageContent() {
       <main
         style={{
           minHeight: "100vh",
-          background: "#ffffff",
+          background: "#f5f5f5",
           color: "#111827",
           display: "flex",
           alignItems: "center",
@@ -387,8 +387,8 @@ function PhonePageContent() {
                 color: "#4b5563",
               }}
             >
-              Ten telefon działa tylko jako mikrofon. Odpowiedź pojawi się głosowo
-              na ekranie TV.
+              Ten telefon działa jako mikrofon do rozmowy z Erionem na ekranie TV.
+              Odpowiedź pojawi się głosowo na TV.
             </p>
           </div>
 
@@ -471,7 +471,7 @@ function PhonePageContent() {
     <main
       style={{
         minHeight: "100vh",
-        background: "#ffffff",
+        background: "#f5f5f5",
         color: "#111827",
         display: "flex",
         alignItems: "center",

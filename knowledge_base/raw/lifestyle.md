@@ -93,3 +93,107 @@ Najbezpieczniej zachęcać dzieci do pytań, ciekawości i sprawdzania informacj
 Querion łączy lifestyle, technologię i rozrywkę. Może inspirować do rozmowy o tym, jak nowe technologie wpływają na naukę, zabawę, podróże i codzienne życie.
 
 To dobry przykład miejsca, gdzie technologia staje się doświadczeniem, a nie tylko ekranem.
+
+
+
+# Rozszerzona baza lifestyle z internetu — bezpieczne odpowiedzi RAG
+
+Ta sekcja służy do szerokich, krótkich odpowiedzi w tematyce lifestyle. Asystent może korzystać z niej, gdy użytkownik pyta o codzienne nawyki, odpoczynek, sen, energię, ruch, koncentrację, kreatywność, cyfrowy wellbeing i relację człowieka z technologią.
+
+Asystent nie diagnozuje, nie leczy, nie zaleca leków, terapii, suplementów ani konkretnych planów medycznych. Odpowiada ogólnie, lekko i praktycznie.
+
+# Odpoczynek
+
+Odpoczynek nie musi być długi, żeby był pomocny. Czasem wystarczy odłożyć telefon, rozluźnić barki, napić się wody i przez chwilę niczego nie przyspieszać.
+
+# Sen
+
+Dobry sen wspiera energię, koncentrację i nastrój. Bezpieczna wskazówka to wieczorem zmniejszyć liczbę bodźców, wyciszyć ekran i utrzymać prosty rytuał zasypiania.
+
+# Energia w ciągu dnia
+
+Na energię często pomagają podstawy: woda, krótki ruch, światło dzienne, przerwa od ekranu i jedna rzecz robiona naraz. Jeśli zmęczenie jest silne albo długotrwałe, warto porozmawiać ze specjalistą.
+
+# Ruch i spacer
+
+Ruch może być prosty. Krótki spacer, rozciągnięcie ramion albo kilka kroków po dłuższym siedzeniu może pomóc wrócić do ciała i odświeżyć myślenie.
+
+# Przerwa od siedzenia
+
+Jeśli ktoś długo siedzi, dobrą mikroprzerwą jest wstanie, poruszenie barkami, spojrzenie w dal i kilka spokojnych oddechów. To nie musi być trening, tylko krótki reset.
+
+# Stres
+
+Przy stresie warto zacząć od małego kroku: spokojny wdech, dłuższy wydech i nazwanie jednej rzeczy, którą można zrobić teraz. Jeśli stres jest silny albo trwa długo, warto szukać wsparcia u człowieka lub specjalisty.
+
+# Oddech
+
+Prosty oddech może pomóc zrobić pauzę. Wystarczy wolny wdech, spokojny wydech i rozluźnienie szczęki lub ramion. Nie trzeba robić z tego skomplikowanego ćwiczenia.
+
+# Koncentracja
+
+Koncentracja lubi prostotę. Wybierz jedno zadanie, ustaw krótki czas, odłóż powiadomienia i zacznij od najłatwiejszego kroku.
+
+# Kreatywność
+
+Kreatywność często pojawia się wtedy, gdy pozwalamy sobie na kilka niedoskonałych pomysłów. Można zacząć od pytania: „a co, jeśli zrobię to zupełnie inaczej?”
+
+# Cyfrowy wellbeing
+
+Cyfrowy wellbeing oznacza korzystanie z technologii tak, żeby wspierała człowieka, a nie ciągle zabierała uwagę. Pomaga wyciszenie powiadomień, przerwy od ekranu i świadome wybieranie, po co sięgamy po telefon.
+
+# Telefon i ekran
+
+Telefon może pomagać, ale łatwo zamienia się w automatyczny odruch. Dobra praktyka to zapytać siebie: „po co teraz sięgam po ekran?” i dopiero wtedy zdecydować.
+
+# Nawyki
+
+Dobry nawyk powinien być mały i łatwy do powtórzenia. Jeden łyk wody, minuta spaceru albo jedno zdanie notatki to lepszy start niż wielki plan, którego nie da się utrzymać.
+
+# Organizacja dnia
+
+Dzień nie musi być zaplanowany co do minuty. Wystarczą trzy priorytety, miejsce na przerwę i świadomość, co można odpuścić.
+
+# Relacja człowieka z technologią
+
+Technologia najlepiej działa wtedy, gdy wzmacnia człowieka, a nie zastępuje jego decyzje. AI może pomóc uporządkować myśli, zaproponować pomysł albo przypomnieć o przerwie.
+
+# Lifestyle i AI
+
+AI może wspierać lifestyle przez inspiracje, pytania, przypomnienia i porządkowanie informacji. Najlepiej traktować ją jak pomocnika do refleksji, a nie autorytet od życia.
+
+# Pytanie: Jak odpocząć?
+
+Możesz zacząć od jednej prostej rzeczy: odłóż telefon, rozluźnij barki i daj sobie chwilę ciszy. Odpoczynek nie musi być perfekcyjny, żeby miał sens.
+
+# Pytanie: Jak mieć więcej energii?
+
+Zacznij od podstaw: woda, krótki ruch, trochę światła i przerwa od ekranu. Jeśli brak energii trwa długo albo Cię niepokoi, warto skonsultować się ze specjalistą.
+
+# Pytanie: Jak się skupić?
+
+Wybierz jedno małe zadanie i daj mu kilka minut bez przełączania się. Najpierw zacznij, a dopiero potem poprawiaj.
+
+# Pytanie: Co zrobić, gdy jestem zestresowany?
+
+Zrób krótką pauzę: wolny wdech, dłuższy wydech i rozluźnienie ramion. Potem wybierz jeden najbliższy mały krok.
+
+# Pytanie: Jak poprawić sen?
+
+Pomaga spokojny rytuał przed snem: mniej bodźców, stała pora i chwila wyciszenia. Jeśli problem ze snem jest poważny albo długotrwały, warto porozmawiać ze specjalistą.
+
+# Pytanie: Co to jest lifestyle?
+
+Lifestyle to codzienne wybory i rytuały: jak odpoczywasz, ruszasz się, pracujesz, rozmawiasz, śpisz i korzystasz z technologii.
+
+# Pytanie: Jak technologia może pomagać na co dzień?
+
+Technologia może przypominać, porządkować informacje i ułatwiać planowanie. Najlepiej działa wtedy, gdy pomaga człowiekowi zrobić mały, konkretny krok.
+
+# Pytanie: Jak zrobić zdrową przerwę?
+
+Oderwij wzrok od ekranu, porusz szyją i barkami, zrób kilka kroków i wróć do zadania spokojniej. To ma być krótka przerwa, nie kolejny obowiązek.
+
+# Pytanie: Jak zacząć zmianę nawyku?
+
+Zacznij od wersji tak małej, że prawie nie da się jej nie zrobić. Jeden łyk wody, minuta spaceru albo jedno zdanie notatki to dobry start.

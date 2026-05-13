@@ -6,7 +6,9 @@ import Avatar from "../../components/Avatar";
 import {
   backendAssetUrl,
   completeTvTurn,
+  getIdleVoice,
   getSessionResponse,
+  setSessionState,
 } from "../../services/api";
 import type { AvatarState } from "../../types/api";
 
@@ -33,9 +35,40 @@ export default function TvClient({
     url: string;
   } | null>(null);
 
+  const [browserOrigin, setBrowserOrigin] = useState("");
+
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const isPlayingRef = useRef(false);
   const lastPlayedResponseIdRef = useRef(0);
+  const lastActivityAtRef = useRef(0);
+  const idleRequestInFlightRef = useRef(false);
+  const idleCooldownMs = 25000;
+
+  useEffect(() => {
+    lastActivityAtRef.current = Date.now();
+    setBrowserOrigin(window.location.origin);
+  }, []);
+
+  const normalizeUrlToCurrentOrigin = (url: string) => {
+    if (!url || !browserOrigin) {
+      return url;
+    }
+
+    try {
+      const parsedUrl = new URL(url);
+      const currentOrigin = new URL(browserOrigin);
+
+      parsedUrl.protocol = currentOrigin.protocol;
+      parsedUrl.host = currentOrigin.host;
+
+      return parsedUrl.toString();
+    } catch {
+      return url;
+    }
+  };
+
+  const safePairingUrl = normalizeUrlToCurrentOrigin(pairingUrl);
+  const safePhoneUrl = normalizeUrlToCurrentOrigin(phoneUrl);
 
   const stopAudioPlayback = () => {
     if (audioRef.current) {
@@ -47,11 +80,27 @@ export default function TvClient({
     isPlayingRef.current = false;
   };
 
-  const finishResponse = async (sid: string, responseId: number) => {
-    lastPlayedResponseIdRef.current = responseId;
-    setPendingAudio(null);
+  const finishResponse = async (
+    sid: string,
+    responseId: number,
+    isIdle = false
+  ) => {
+    lastActivityAtRef.current = Date.now();
+
+    if (!isIdle) {
+      lastPlayedResponseIdRef.current = responseId;
+      setPendingAudio(null);
+    }
+
     setAvatarState("waiting");
     setStatusText("Gotowy do rozmowy.");
+
+    if (isIdle) {
+      try {
+        await setSessionState(sid, "waiting", "tv");
+      } catch {}
+      return;
+    }
 
     try {
       await completeTvTurn(sid);
@@ -60,7 +109,11 @@ export default function TvClient({
     }
   };
 
-  const playTvAudio = async (audioUrl: string, responseId: number) => {
+  const playTvAudio = async (
+    audioUrl: string,
+    responseId: number,
+    isIdle = false
+  ) => {
     if (!sessionId || isPlayingRef.current) {
       return;
     }
@@ -79,17 +132,22 @@ export default function TvClient({
     audioRef.current = audio;
     isPlayingRef.current = true;
 
+    lastActivityAtRef.current = Date.now();
     setAvatarState("speaking");
-    setStatusText("Quera odpowiada...");
+    setStatusText(
+      isIdle ? "Erion zaprasza do rozmowy..." : "Erion odpowiada..."
+    );
 
     audio.onplay = () => {
       setAvatarState("speaking");
-      setStatusText("Quera odpowiada...");
+      setStatusText(
+        isIdle ? "Erion zaprasza do rozmowy..." : "Erion odpowiada..."
+      );
     };
 
     audio.onended = () => {
       isPlayingRef.current = false;
-      void finishResponse(sessionId, responseId);
+      void finishResponse(sessionId, responseId, isIdle);
     };
 
     audio.onerror = () => {
@@ -97,8 +155,13 @@ export default function TvClient({
 
       isPlayingRef.current = false;
       setAvatarState("waiting");
-      setPendingAudio({ id: responseId, url: audioUrl });
-      setStatusText("Odpowiedź gotowa. Kliknij „Odtwórz odpowiedź”.");
+
+      if (!isIdle) {
+        setPendingAudio({ id: responseId, url: audioUrl });
+        setStatusText("Odpowiedź gotowa. Kliknij „Odtwórz odpowiedź”.");
+      } else {
+        void finishResponse(sessionId, responseId, true);
+      }
     };
 
     try {
@@ -108,8 +171,13 @@ export default function TvClient({
 
       isPlayingRef.current = false;
       setAvatarState("waiting");
-      setPendingAudio({ id: responseId, url: audioUrl });
-      setStatusText("Kliknij „Odtwórz odpowiedź”.");
+
+      if (!isIdle) {
+        setPendingAudio({ id: responseId, url: audioUrl });
+        setStatusText("Kliknij „Odtwórz odpowiedź”.");
+      } else {
+        void finishResponse(sessionId, responseId, true);
+      }
     }
   };
 
@@ -156,10 +224,10 @@ export default function TvClient({
         if (!status.has_new_response) {
           if (status.state === "listening") {
             setAvatarState("listening");
-            setStatusText("Słucham...");
+            setStatusText("Erion słucha...");
           } else if (status.state === "thinking") {
             setAvatarState("thinking");
-            setStatusText("Myślę...");
+            setStatusText("Erion myśli...");
           } else if (status.state === "waiting") {
             setAvatarState("waiting");
             setStatusText("Gotowy do rozmowy.");
@@ -194,6 +262,57 @@ export default function TvClient({
       stopAudioPlayback();
     };
   }, [sessionId, soundEnabled]);
+
+  useEffect(() => {
+    if (!sessionId || !soundEnabled) {
+      return;
+    }
+
+    let cancelled = false;
+
+    const interval = window.setInterval(async () => {
+      if (
+        cancelled ||
+        isPlayingRef.current ||
+        pendingAudio ||
+        avatarState !== "waiting" ||
+        idleRequestInFlightRef.current
+      ) {
+        return;
+      }
+
+      const now = Date.now();
+
+      if (now - lastActivityAtRef.current < idleCooldownMs) {
+        return;
+      }
+
+      try {
+        idleRequestInFlightRef.current = true;
+        lastActivityAtRef.current = now;
+
+        const result = await getIdleVoice({
+          sessionId,
+          target: "tv",
+        });
+
+        if (cancelled || !result.answer_audio_url) {
+          return;
+        }
+
+        await playTvAudio(result.answer_audio_url, -1, true);
+      } catch (error) {
+        console.warn("TV idle error:", error);
+      } finally {
+        idleRequestInFlightRef.current = false;
+      }
+    }, 3000);
+
+    return () => {
+      cancelled = true;
+      window.clearInterval(interval);
+    };
+  }, [sessionId, soundEnabled, avatarState, pendingAudio]);
 
   const renderQr = (value: string, size: number) => {
     if (!value) {
@@ -239,6 +358,7 @@ export default function TvClient({
         html,
         body {
           overflow: hidden !important;
+          background: #f5f5f5 !important;
         }
       `}</style>
 
@@ -257,14 +377,12 @@ export default function TvClient({
         <header
           style={{
             display: "grid",
-            gridTemplateColumns: "1fr auto 1fr",
+            gridTemplateColumns: "1fr auto auto",
             alignItems: "center",
-            gap: 12,
+            gap: 18,
             minHeight: 132,
           }}
         >
-          <div />
-
           <div
             style={{
               display: "grid",
@@ -274,11 +392,7 @@ export default function TvClient({
               gap: 18,
             }}
           >
-            <div
-              style={{
-                textAlign: "right",
-              }}
-            >
+            <div style={{ textAlign: "right" }}>
               <h1
                 style={{
                   margin: 0,
@@ -288,7 +402,7 @@ export default function TvClient({
                   lineHeight: 1.02,
                 }}
               >
-                Porozmawiaj z Querą!
+                Porozmawiaj z Erionem!
               </h1>
 
               <div
@@ -318,9 +432,11 @@ export default function TvClient({
                 flexShrink: 0,
               }}
             >
-              {renderQr(pairingUrl, 88)}
+              {renderQr(safePairingUrl, 88)}
             </div>
           </div>
+
+          <div style={{ flex: 1 }} />
 
           <div
             style={{
@@ -337,7 +453,7 @@ export default function TvClient({
                 border: "none",
                 borderRadius: 999,
                 padding: "9px 14px",
-                background: soundEnabled ? "#16a34a" : "#111827",
+                background: soundEnabled ? "#4caf50" : "#111827",
                 color: "#ffffff",
                 fontSize: 13,
                 fontWeight: 800,
@@ -377,20 +493,22 @@ export default function TvClient({
             alignItems: "center",
             justifyContent: "center",
             overflow: "hidden",
+            background: "transparent",
           }}
         >
           <div
             style={{
-              width: "min(72vw, 760px)",
+              width: "min(74vw, 820px)",
               height: "100%",
               maxHeight: "calc(100svh - 310px)",
               minHeight: 260,
-              borderRadius: 28,
               overflow: "hidden",
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
-              background: "#ffffff",
+              background: "transparent",
+              borderRadius: 0,
+              boxShadow: "none",
             }}
           >
             <div
@@ -400,6 +518,7 @@ export default function TvClient({
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
+                background: "transparent",
               }}
             >
               <Avatar state={avatarState} variant="tv" size="tv" />
@@ -435,7 +554,7 @@ export default function TvClient({
                 textAlign: "right",
               }}
             >
-              Zabierz Eriona ze sobą
+              Zabierz Querę ze sobą
               <br />
               na spacer
             </h2>
@@ -453,7 +572,7 @@ export default function TvClient({
                 flexShrink: 0,
               }}
             >
-              {renderQr(phoneUrl, 92)}
+              {renderQr(safePhoneUrl, 92)}
             </div>
           </div>
         </footer>

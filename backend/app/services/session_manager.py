@@ -72,6 +72,9 @@ class SessionManager:
             session.answer_audio_url = answer_audio_url
             session.state = "speaking" if answer_audio_url else "waiting"
 
+            if not answer_audio_url:
+                session.busy = False
+
             return session
 
     def get_response_status(
@@ -106,12 +109,14 @@ class SessionManager:
                 return self._status_for_client(session, client_id)
 
             if client_id in session.queue:
-                return self._status_for_client(session, client_id)
+                session.queue.remove(client_id)
 
-            if session.active_client_id is None and not session.busy:
+            if not session.busy:
                 session.active_client_id = client_id
+                session.queue.clear()
             else:
-                session.queue.append(client_id)
+                if client_id != session.active_client_id and client_id not in session.queue:
+                    session.queue.append(client_id)
 
             return self._status_for_client(session, client_id)
 
@@ -126,6 +131,18 @@ class SessionManager:
             if not session:
                 raise KeyError("Session not found")
 
+            if (
+                session.kind == "tv"
+                and client_id
+                and not session.busy
+                and session.active_client_id
+                and session.active_client_id != client_id
+                and client_id in session.queue
+            ):
+                session.queue.remove(client_id)
+                session.active_client_id = client_id
+                session.queue.clear()
+
             return self._status_for_client(session, client_id)
 
     def can_client_record_on_tv(
@@ -138,6 +155,10 @@ class SessionManager:
 
             if not session or session.kind != "tv" or not client_id:
                 return False
+
+            if not session.busy and session.active_client_id != client_id:
+                session.active_client_id = client_id
+                session.queue = [item for item in session.queue if item != client_id]
 
             return session.active_client_id == client_id and not session.busy
 

@@ -4,3 +4,5 @@ pydantic
 python-dotenv
 python-multipart
 openai
+requests
+beautifulsoup4

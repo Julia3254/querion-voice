@@ -1,0 +1,60 @@
+{
+  "sources": [
+    {
+      "name": "WHO physical activity",
+      "url": "https://www.who.int/news-room/fact-sheets/detail/physical-activity",
+      "topic": "movement",
+      "language": "en",
+      "priority": 10
+    },
+    {
+      "name": "NHS healthy living",
+      "url": "https://www.nhs.uk/live-well/",
+      "topic": "lifestyle",
+      "language": "en",
+      "priority": 9
+    },
+    {
+      "name": "NHS eat well",
+      "url": "https://www.nhs.uk/live-well/eat-well/",
+      "topic": "nutrition",
+      "language": "en",
+      "priority": 7
+    },
+    {
+      "name": "CDC sleep",
+      "url": "https://www.cdc.gov/sleep/index.html",
+      "topic": "sleep",
+      "language": "en",
+      "priority": 9
+    },
+    {
+      "name": "CDC about sleep",
+      "url": "https://www.cdc.gov/sleep/about/index.html",
+      "topic": "sleep",
+      "language": "en",
+      "priority": 9
+    },
+    {
+      "name": "CDC managing stress",
+      "url": "https://www.cdc.gov/mental-health/living-with/index.html",
+      "topic": "stress",
+      "language": "en",
+      "priority": 9
+    },
+    {
+      "name": "CDC stress tips",
+      "url": "https://www.cdc.gov/howrightnow/emotion/stress/index.html",
+      "topic": "stress",
+      "language": "en",
+      "priority": 8
+    },
+    {
+      "name": "NHS better health",
+      "url": "https://www.nhs.uk/better-health/",
+      "topic": "small_changes",
+      "language": "en",
+      "priority": 8
+    }
+  ]
+}
