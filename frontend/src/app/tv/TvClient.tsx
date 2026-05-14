@@ -347,96 +347,86 @@ export default function TvClient({
         width: "100vw",
         height: "100svh",
         overflow: "hidden",
-        background: "#f5f5f5",
-        color: "#0f172a",
+        background:
+          "radial-gradient(circle at 88% 28%, rgba(255, 74, 28, 0.42), transparent 34%), radial-gradient(circle at 95% 90%, rgba(255, 28, 45, 0.24), transparent 42%), radial-gradient(circle at 15% 15%, rgba(255, 255, 255, 0.06), transparent 28%), linear-gradient(135deg, #0B0B12 0%, #151016 42%, #2A0D08 72%, #5A160B 100%)",
+        color: "#ffffff",
         fontFamily: "Arial, sans-serif",
         boxSizing: "border-box",
-        padding: "10px 18px 14px",
+        padding: "12px 22px 18px",
       }}
     >
       <style jsx global>{`
         html,
         body {
           overflow: hidden !important;
-          background: #f5f5f5 !important;
+          background: #0b0b12 !important;
         }
       `}</style>
 
       <div
+        aria-hidden="true"
         style={{
+          position: "absolute",
+          inset: 0,
+          backgroundImage:
+            "radial-gradient(rgba(255, 255, 255, 0.12) 1px, transparent 1px)",
+          backgroundSize: "14px 14px",
+          opacity: 0.22,
+          pointerEvents: "none",
+        }}
+      />
+
+      <div
+        style={{
+          position: "relative",
+          zIndex: 1,
           width: "100%",
           height: "100%",
           maxWidth: 1360,
           margin: "0 auto",
           display: "grid",
           gridTemplateRows: "auto minmax(0, 1fr) auto",
-          gap: 8,
+          gap: 10,
           alignItems: "stretch",
         }}
       >
         <header
           style={{
             display: "grid",
-            gridTemplateColumns: "1fr auto auto",
+            gridTemplateColumns: "1fr auto",
             alignItems: "center",
             gap: 18,
-            minHeight: 132,
+            minHeight: 86,
           }}
         >
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "auto auto",
-              alignItems: "center",
-              justifyContent: "center",
-              gap: 18,
-            }}
-          >
-            <div style={{ textAlign: "right" }}>
-              <h1
-                style={{
-                  margin: 0,
-                  fontSize: "clamp(30px, 3.2vw, 54px)",
-                  fontWeight: 900,
-                  letterSpacing: "-0.035em",
-                  lineHeight: 1.02,
-                }}
-              >
-                Porozmawiaj z Erionem!
-              </h1>
-
-              <div
-                style={{
-                  marginTop: 8,
-                  fontSize: "clamp(15px, 1.45vw, 23px)",
-                  fontWeight: 700,
-                  lineHeight: 1.15,
-                }}
-              >
-                Zeskanuj i użyj telefonu
-                <br />
-                jako mikrofonu
-              </div>
-            </div>
-
+          <div>
             <div
               style={{
-                width: 112,
-                height: 112,
-                borderRadius: 16,
-                background: "#ffffff",
-                boxShadow: "0 8px 24px rgba(15, 23, 42, 0.09)",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                flexShrink: 0,
+                marginBottom: 4,
+                fontSize: "clamp(12px, 1vw, 15px)",
+                fontWeight: 900,
+                letterSpacing: "0.38em",
+                color: "rgba(255, 255, 255, 0.48)",
+                textTransform: "uppercase",
               }}
             >
-              {renderQr(safePairingUrl, 88)}
+              Model głosowy AI
             </div>
-          </div>
 
-          <div style={{ flex: 1 }} />
+            <h1
+              style={{
+                margin: 0,
+                fontSize: "clamp(34px, 4vw, 64px)",
+                fontWeight: 950,
+                letterSpacing: "-0.045em",
+                lineHeight: 0.95,
+                color: "#ffffff",
+                textShadow: "0 12px 34px rgba(0, 0, 0, 0.35)",
+              }}
+            >
+              Porozmawiaj z Erionem
+            </h1>
+          </div>
 
           <div
             style={{
@@ -446,23 +436,27 @@ export default function TvClient({
               flexWrap: "wrap",
             }}
           >
-            <button
-              type="button"
-              onClick={handleEnableSound}
-              style={{
-                border: "none",
-                borderRadius: 999,
-                padding: "9px 14px",
-                background: soundEnabled ? "#4caf50" : "#111827",
-                color: "#ffffff",
-                fontSize: 13,
-                fontWeight: 800,
-                cursor: "pointer",
-                whiteSpace: "nowrap",
-              }}
-            >
-              {soundEnabled ? "Dźwięk włączony" : "Włącz dźwięk"}
-            </button>
+            {!soundEnabled && (
+              <button
+                type="button"
+                onClick={handleEnableSound}
+                style={{
+                  border: "1px solid rgba(255, 255, 255, 0.25)",
+                  borderRadius: 999,
+                  padding: "10px 16px",
+                  background: "rgba(255, 255, 255, 0.14)",
+                  color: "#ffffff",
+                  fontSize: 13,
+                  fontWeight: 800,
+                  cursor: "pointer",
+                  whiteSpace: "nowrap",
+                  boxShadow: "0 12px 30px rgba(0, 0, 0, 0.25)",
+                  backdropFilter: "blur(14px)",
+                }}
+              >
+                Włącz dźwięk
+              </button>
+            )}
 
             {pendingAudio && (
               <button
@@ -471,13 +465,15 @@ export default function TvClient({
                 style={{
                   border: "none",
                   borderRadius: 999,
-                  padding: "9px 14px",
-                  background: "#2563eb",
+                  padding: "10px 16px",
+                  background:
+                    "linear-gradient(135deg, #ff4a1c 0%, #ff1c2d 100%)",
                   color: "#ffffff",
                   fontSize: 13,
                   fontWeight: 800,
                   cursor: "pointer",
                   whiteSpace: "nowrap",
+                  boxShadow: "0 12px 30px rgba(255, 56, 28, 0.35)",
                 }}
               >
                 Odtwórz odpowiedź
@@ -498,10 +494,10 @@ export default function TvClient({
         >
           <div
             style={{
-              width: "min(74vw, 820px)",
+              width: "min(76vw, 860px)",
               height: "100%",
-              maxHeight: "calc(100svh - 310px)",
-              minHeight: 260,
+              maxHeight: "calc(100svh - 300px)",
+              minHeight: 250,
               overflow: "hidden",
               display: "flex",
               alignItems: "center",
@@ -511,61 +507,154 @@ export default function TvClient({
               boxShadow: "none",
             }}
           >
-            <div
-              style={{
-                width: "100%",
-                height: "100%",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                background: "transparent",
-              }}
-            >
-              <Avatar state={avatarState} variant="tv" size="tv" />
-            </div>
+            <Avatar state={avatarState} variant="tv" size="tv" />
           </div>
         </section>
 
         <footer
           style={{
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            minHeight: 138,
-            borderTop: "1px solid #d4d4d8",
-            paddingTop: 10,
+            minHeight: 160,
+            display: "grid",
+            gridTemplateColumns: "1fr 1fr",
+            gap: 18,
+            alignItems: "stretch",
           }}
         >
           <div
             style={{
               display: "grid",
-              gridTemplateColumns: "auto auto",
+              gridTemplateColumns: "1fr auto",
               alignItems: "center",
               gap: 18,
+              padding: "18px 22px",
+              borderRadius: 28,
+              border: "1px solid rgba(255, 255, 255, 0.14)",
+              background: "rgba(255, 255, 255, 0.075)",
+              boxShadow: "0 18px 45px rgba(0, 0, 0, 0.24)",
+              backdropFilter: "blur(18px)",
             }}
           >
-            <h2
-              style={{
-                margin: 0,
-                fontSize: "clamp(24px, 2.5vw, 44px)",
-                fontWeight: 900,
-                letterSpacing: "-0.035em",
-                lineHeight: 1.05,
-                textAlign: "right",
-              }}
-            >
-              Zabierz Querę ze sobą
-              <br />
-              na spacer
-            </h2>
+            <div>
+              <div
+                style={{
+                  marginBottom: 6,
+                  fontSize: 12,
+                  fontWeight: 900,
+                  letterSpacing: "0.32em",
+                  color: "rgba(255, 255, 255, 0.48)",
+                  textTransform: "uppercase",
+                }}
+              >
+                Mikrofon w telefonie
+              </div>
+
+              <h2
+                style={{
+                  margin: 0,
+                  fontSize: "clamp(24px, 2.35vw, 40px)",
+                  fontWeight: 950,
+                  letterSpacing: "-0.04em",
+                  lineHeight: 1.02,
+                  color: "#ffffff",
+                }}
+              >
+                Porozmawiaj
+                <br />z Erionem
+              </h2>
+
+              <p
+                style={{
+                  margin: "8px 0 0",
+                  fontSize: "clamp(13px, 1.1vw, 17px)",
+                  fontWeight: 700,
+                  lineHeight: 1.25,
+                  color: "rgba(255, 255, 255, 0.66)",
+                }}
+              >
+                Zeskanuj QR i użyj telefonu jako mikrofonu.
+              </p>
+            </div>
 
             <div
               style={{
                 width: 118,
                 height: 118,
-                borderRadius: 16,
+                borderRadius: 18,
                 background: "#ffffff",
-                boxShadow: "0 8px 24px rgba(15, 23, 42, 0.09)",
+                boxShadow: "0 18px 45px rgba(0, 0, 0, 0.3)",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                flexShrink: 0,
+              }}
+            >
+              {renderQr(safePairingUrl, 92)}
+            </div>
+          </div>
+
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "1fr auto",
+              alignItems: "center",
+              gap: 18,
+              padding: "18px 22px",
+              borderRadius: 28,
+              border: "1px solid rgba(255, 255, 255, 0.14)",
+              background: "rgba(255, 255, 255, 0.075)",
+              boxShadow: "0 18px 45px rgba(0, 0, 0, 0.24)",
+              backdropFilter: "blur(18px)",
+            }}
+          >
+            <div>
+              <div
+                style={{
+                  marginBottom: 6,
+                  fontSize: 12,
+                  fontWeight: 900,
+                  letterSpacing: "0.32em",
+                  color: "rgba(255, 255, 255, 0.48)",
+                  textTransform: "uppercase",
+                }}
+              >
+                Wersja mobilna
+              </div>
+
+              <h2
+                style={{
+                  margin: 0,
+                  fontSize: "clamp(24px, 2.35vw, 40px)",
+                  fontWeight: 950,
+                  letterSpacing: "-0.04em",
+                  lineHeight: 1.02,
+                  color: "#ffffff",
+                }}
+              >
+                Zabierz Querę
+                <br />
+                ze sobą
+              </h2>
+
+              <p
+                style={{
+                  margin: "8px 0 0",
+                  fontSize: "clamp(13px, 1.1vw, 17px)",
+                  fontWeight: 700,
+                  lineHeight: 1.25,
+                  color: "rgba(255, 255, 255, 0.66)",
+                }}
+              >
+                Zeskanuj QR i przejdź do wersji na telefon.
+              </p>
+            </div>
+
+            <div
+              style={{
+                width: 118,
+                height: 118,
+                borderRadius: 18,
+                background: "#ffffff",
+                boxShadow: "0 18px 45px rgba(0, 0, 0, 0.3)",
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
