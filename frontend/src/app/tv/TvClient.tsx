@@ -20,6 +20,11 @@ type TvClientProps = {
   setupError?: string;
 };
 
+type PendingAudio = {
+  id: number;
+  url: string;
+};
+
 export default function TvClient({
   sessionId,
   initialState,
@@ -29,12 +34,8 @@ export default function TvClient({
 }: TvClientProps) {
   const [avatarState, setAvatarState] = useState<AvatarState>(initialState);
   const [soundEnabled, setSoundEnabled] = useState(false);
-  const [, setStatusText] = useState("Gotowy do rozmowy.");
-  const [pendingAudio, setPendingAudio] = useState<{
-    id: number;
-    url: string;
-  } | null>(null);
-
+  const [statusText, setStatusText] = useState("Gotowy do rozmowy.");
+  const [pendingAudio, setPendingAudio] = useState<PendingAudio | null>(null);
   const [browserOrigin, setBrowserOrigin] = useState("");
 
   const audioRef = useRef<HTMLAudioElement | null>(null);
@@ -42,11 +43,33 @@ export default function TvClient({
   const lastPlayedResponseIdRef = useRef(0);
   const lastActivityAtRef = useRef(0);
   const idleRequestInFlightRef = useRef(false);
+  const pendingAudioRef = useRef<PendingAudio | null>(null);
+  const turnSafetyTimeoutRef = useRef<number | null>(null);
+  const activeResponseRef = useRef<{
+    id: number;
+    isIdle: boolean;
+  } | null>(null);
+
   const idleCooldownMs = 25000;
+
+  // TV: po 35 sekundach awaryjnie kończy turę, żeby telefon nie wisiał.
+  const tvTurnSafetyMs = 35000;
+
+  // Idle/automatyczne zaczepki kończymy szybciej.
+  const idleSafetyMs = 15000;
+
+  useEffect(() => {
+    pendingAudioRef.current = pendingAudio;
+  }, [pendingAudio]);
 
   useEffect(() => {
     lastActivityAtRef.current = Date.now();
     setBrowserOrigin(window.location.origin);
+
+    return () => {
+      clearTurnSafetyTimeout();
+      stopAudioPlayback();
+    };
   }, []);
 
   const normalizeUrlToCurrentOrigin = (url: string) => {
@@ -70,6 +93,13 @@ export default function TvClient({
   const safePairingUrl = normalizeUrlToCurrentOrigin(pairingUrl);
   const safePhoneUrl = normalizeUrlToCurrentOrigin(phoneUrl);
 
+  const clearTurnSafetyTimeout = () => {
+    if (turnSafetyTimeoutRef.current) {
+      window.clearTimeout(turnSafetyTimeoutRef.current);
+      turnSafetyTimeoutRef.current = null;
+    }
+  };
+
   const stopAudioPlayback = () => {
     if (audioRef.current) {
       audioRef.current.pause();
@@ -85,11 +115,14 @@ export default function TvClient({
     responseId: number,
     isIdle = false
   ) => {
+    clearTurnSafetyTimeout();
+    activeResponseRef.current = null;
     lastActivityAtRef.current = Date.now();
 
     if (!isIdle) {
       lastPlayedResponseIdRef.current = responseId;
       setPendingAudio(null);
+      pendingAudioRef.current = null;
     }
 
     setAvatarState("waiting");
@@ -109,6 +142,43 @@ export default function TvClient({
     }
   };
 
+  const forceFinishResponse = async (
+    sid: string,
+    responseId: number,
+    isIdle = false
+  ) => {
+    console.warn("Awaryjne zakończenie tury TV:", {
+      responseId,
+      isIdle,
+    });
+
+    stopAudioPlayback();
+    await finishResponse(sid, responseId, isIdle);
+  };
+
+  const scheduleTurnSafetyTimeout = (responseId: number, isIdle = false) => {
+    clearTurnSafetyTimeout();
+
+    activeResponseRef.current = {
+      id: responseId,
+      isIdle,
+    };
+
+    turnSafetyTimeoutRef.current = window.setTimeout(() => {
+      const activeResponse = activeResponseRef.current;
+
+      if (!activeResponse || activeResponse.id !== responseId) {
+        return;
+      }
+
+      void forceFinishResponse(
+        sessionId,
+        activeResponse.id,
+        activeResponse.isIdle
+      );
+    }, isIdle ? idleSafetyMs : tvTurnSafetyMs);
+  };
+
   const playTvAudio = async (
     audioUrl: string,
     responseId: number,
@@ -123,10 +193,16 @@ export default function TvClient({
     if (!resolvedAudioUrl) {
       setAvatarState("waiting");
       setStatusText("Brak pliku audio.");
+
+      if (!isIdle) {
+        await finishResponse(sessionId, responseId, false);
+      }
+
       return;
     }
 
     stopAudioPlayback();
+    scheduleTurnSafetyTimeout(responseId, isIdle);
 
     const audio = new Audio(resolvedAudioUrl);
     audioRef.current = audio;
@@ -157,8 +233,11 @@ export default function TvClient({
       setAvatarState("waiting");
 
       if (!isIdle) {
-        setPendingAudio({ id: responseId, url: audioUrl });
-        setStatusText("Odpowiedź gotowa. Kliknij „Odtwórz odpowiedź”.");
+        const nextPendingAudio = { id: responseId, url: audioUrl };
+        setPendingAudio(nextPendingAudio);
+        pendingAudioRef.current = nextPendingAudio;
+        setStatusText("Odpowiedź gotowa. Kliknij „Odtwórz odpowiedź” na TV.");
+        scheduleTurnSafetyTimeout(responseId, false);
       } else {
         void finishResponse(sessionId, responseId, true);
       }
@@ -173,8 +252,11 @@ export default function TvClient({
       setAvatarState("waiting");
 
       if (!isIdle) {
-        setPendingAudio({ id: responseId, url: audioUrl });
-        setStatusText("Kliknij „Odtwórz odpowiedź”.");
+        const nextPendingAudio = { id: responseId, url: audioUrl };
+        setPendingAudio(nextPendingAudio);
+        pendingAudioRef.current = nextPendingAudio;
+        setStatusText("Kliknij „Odtwórz odpowiedź” na TV.");
+        scheduleTurnSafetyTimeout(responseId, false);
       } else {
         void finishResponse(sessionId, responseId, true);
       }
@@ -185,18 +267,27 @@ export default function TvClient({
     setSoundEnabled(true);
     setStatusText("Dźwięk TV włączony.");
 
-    if (pendingAudio) {
-      await playTvAudio(pendingAudio.url, pendingAudio.id);
+    const audioToPlay = pendingAudioRef.current;
+
+    if (audioToPlay) {
+      setPendingAudio(null);
+      pendingAudioRef.current = null;
+      await playTvAudio(audioToPlay.url, audioToPlay.id);
     }
   };
 
   const handlePlayPending = async () => {
-    if (!pendingAudio) {
+    const audioToPlay = pendingAudioRef.current;
+
+    if (!audioToPlay) {
       return;
     }
 
     setSoundEnabled(true);
-    await playTvAudio(pendingAudio.url, pendingAudio.id);
+    setPendingAudio(null);
+    pendingAudioRef.current = null;
+
+    await playTvAudio(audioToPlay.url, audioToPlay.id);
   };
 
   useEffect(() => {
@@ -239,13 +330,23 @@ export default function TvClient({
           status.answer_audio_url &&
           status.response_id > lastPlayedResponseIdRef.current
         ) {
+          if (pendingAudioRef.current?.id === status.response_id) {
+            return;
+          }
+
           if (!soundEnabled) {
-            setPendingAudio({
+            const nextPendingAudio = {
               id: status.response_id,
               url: status.answer_audio_url,
-            });
-            setAvatarState("speaking");
-            setStatusText("Odpowiedź gotowa. Kliknij „Odtwórz odpowiedź”.");
+            };
+
+            setPendingAudio(nextPendingAudio);
+            pendingAudioRef.current = nextPendingAudio;
+            setAvatarState("waiting");
+            setStatusText(
+              "Odpowiedź gotowa. Kliknij „Włącz dźwięk i odtwórz odpowiedź” na TV."
+            );
+            scheduleTurnSafetyTimeout(status.response_id, false);
             return;
           }
 
@@ -259,7 +360,6 @@ export default function TvClient({
     return () => {
       cancelled = true;
       window.clearInterval(interval);
-      stopAudioPlayback();
     };
   }, [sessionId, soundEnabled]);
 
@@ -274,7 +374,7 @@ export default function TvClient({
       if (
         cancelled ||
         isPlayingRef.current ||
-        pendingAudio ||
+        pendingAudioRef.current ||
         avatarState !== "waiting" ||
         idleRequestInFlightRef.current
       ) {
@@ -312,7 +412,7 @@ export default function TvClient({
       cancelled = true;
       window.clearInterval(interval);
     };
-  }, [sessionId, soundEnabled, avatarState, pendingAudio]);
+  }, [sessionId, soundEnabled, avatarState]);
 
   const renderQr = (value: string, size: number) => {
     if (!value) {
@@ -338,6 +438,8 @@ export default function TvClient({
 
     return <QRCodeSVG value={value} size={size} marginSize={1} />;
   };
+
+  const showSoundOverlay = !soundEnabled || Boolean(pendingAudio);
 
   return (
     <main
@@ -376,6 +478,113 @@ export default function TvClient({
         }}
       />
 
+      {showSoundOverlay && (
+        <div
+          style={{
+            position: "absolute",
+            inset: 0,
+            zIndex: 20,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            padding: 24,
+            pointerEvents: "none",
+          }}
+        >
+          <div
+            style={{
+              width: "min(680px, 90vw)",
+              borderRadius: 34,
+              border: "1px solid rgba(255, 255, 255, 0.18)",
+              background: "rgba(10, 10, 18, 0.78)",
+              boxShadow: "0 30px 90px rgba(0, 0, 0, 0.48)",
+              backdropFilter: "blur(22px)",
+              padding: "30px 34px",
+              textAlign: "center",
+              pointerEvents: "auto",
+            }}
+          >
+            <div
+              style={{
+                marginBottom: 10,
+                fontSize: 13,
+                fontWeight: 900,
+                letterSpacing: "0.34em",
+                color: "rgba(255, 255, 255, 0.5)",
+                textTransform: "uppercase",
+              }}
+            >
+              Dźwięk TV
+            </div>
+
+            <h2
+              style={{
+                margin: 0,
+                fontSize: "clamp(30px, 4vw, 54px)",
+                fontWeight: 950,
+                letterSpacing: "-0.045em",
+                lineHeight: 1,
+                color: "#ffffff",
+              }}
+            >
+              {pendingAudio ? "Odpowiedź jest gotowa" : "Włącz dźwięk na TV"}
+            </h2>
+
+            <p
+              style={{
+                margin: "14px auto 22px",
+                maxWidth: 520,
+                fontSize: "clamp(16px, 1.6vw, 22px)",
+                lineHeight: 1.35,
+                color: "rgba(255, 255, 255, 0.72)",
+                fontWeight: 700,
+              }}
+            >
+              {pendingAudio
+                ? "Kliknij przycisk, żeby odtworzyć odpowiedź Eriona na ekranie TV."
+                : "Przeglądarka wymaga kliknięcia na TV, zanim pozwoli odtwarzać głos."}
+            </p>
+
+            <button
+              type="button"
+              onClick={pendingAudio ? handlePlayPending : handleEnableSound}
+              style={{
+                border: "none",
+                borderRadius: 999,
+                padding: "18px 30px",
+                background:
+                  "linear-gradient(135deg, #ff4a1c 0%, #ff1c2d 100%)",
+                color: "#ffffff",
+                fontSize: "clamp(18px, 2vw, 26px)",
+                fontWeight: 950,
+                cursor: "pointer",
+                whiteSpace: "nowrap",
+                boxShadow: "0 18px 45px rgba(255, 56, 28, 0.38)",
+              }}
+            >
+              {pendingAudio
+                ? soundEnabled
+                  ? "Odtwórz odpowiedź"
+                  : "Włącz dźwięk i odtwórz odpowiedź"
+                : "Włącz dźwięk"}
+            </button>
+
+            <div
+              style={{
+                marginTop: 16,
+                fontSize: 14,
+                lineHeight: 1.35,
+                color: "rgba(255, 255, 255, 0.52)",
+                fontWeight: 700,
+              }}
+            >
+              Jeśli nikt nie kliknie, aplikacja awaryjnie odblokuje telefon po
+              chwili.
+            </div>
+          </div>
+        </div>
+      )}
+
       <div
         style={{
           position: "relative",
@@ -388,6 +597,7 @@ export default function TvClient({
           gridTemplateRows: "auto minmax(0, 1fr) auto",
           gap: 10,
           alignItems: "stretch",
+          filter: showSoundOverlay ? "blur(1px)" : "none",
         }}
       >
         <header
@@ -426,6 +636,24 @@ export default function TvClient({
             >
               Porozmawiaj z Erionem
             </h1>
+
+            <div
+              style={{
+                marginTop: 10,
+                display: "inline-flex",
+                maxWidth: 720,
+                padding: "8px 13px",
+                borderRadius: 999,
+                border: "1px solid rgba(255, 255, 255, 0.14)",
+                background: "rgba(255, 255, 255, 0.075)",
+                color: "rgba(255, 255, 255, 0.72)",
+                fontSize: 14,
+                fontWeight: 800,
+                lineHeight: 1.25,
+              }}
+            >
+              {statusText}
+            </div>
           </div>
 
           <div

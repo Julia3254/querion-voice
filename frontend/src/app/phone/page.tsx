@@ -7,6 +7,7 @@ import VoiceWave from "../../components/VoiceWave";
 import { useAudioRecorder } from "../../hooks/useAudioRecorder";
 import {
   buildAudioSrc,
+  completeTvTurn,
   createPhoneSession,
   getClientId,
   getTvStatus,
@@ -32,9 +33,13 @@ function PhonePageContent() {
   const [statusText, setStatusText] = useState("Łączenie...");
   const [connectionError, setConnectionError] = useState("");
   const [pendingAudioSrc, setPendingAudioSrc] = useState<string | null>(null);
+  const [showTvUnlock, setShowTvUnlock] = useState(false);
 
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const isRecordingTurnRef = useRef(false);
+  const isWaitingForTvResponseRef = useRef(false);
+  const tvSafetyTimeoutRef = useRef<number | null>(null);
+  const tvUnlockButtonTimeoutRef = useRef<number | null>(null);
 
   const {
     isRecording,
@@ -48,6 +53,18 @@ function PhonePageContent() {
   const pageTitle = useMemo(() => {
     return isTvMicMode ? "Mikrofon TV" : "Zabierz Querę ze sobą";
   }, [isTvMicMode]);
+
+  const clearTvTimers = () => {
+    if (tvSafetyTimeoutRef.current) {
+      window.clearTimeout(tvSafetyTimeoutRef.current);
+      tvSafetyTimeoutRef.current = null;
+    }
+
+    if (tvUnlockButtonTimeoutRef.current) {
+      window.clearTimeout(tvUnlockButtonTimeoutRef.current);
+      tvUnlockButtonTimeoutRef.current = null;
+    }
+  };
 
   const stopAudioPlayback = () => {
     if (audioRef.current) {
@@ -104,14 +121,73 @@ function PhonePageContent() {
     setQueuePosition(status.queue_position ?? null);
 
     if (status.can_record) {
+      clearTvTimers();
+      isWaitingForTvResponseRef.current = false;
+      setShowTvUnlock(false);
       setStatusText(
         "Połączono z TV. Kliknij przycisk, powiedz pytanie i kliknij drugi raz, żeby wysłać."
       );
-    } else if (status.queue_position) {
+    } else if (status.queue_position != null) {
+      clearTvTimers();
+      isWaitingForTvResponseRef.current = false;
+      setShowTvUnlock(false);
       setStatusText(`Jesteś w kolejce. Twoje miejsce: ${status.queue_position}.`);
     } else {
       setStatusText("Erion odpowiada. Poczekaj chwilę.");
     }
+  };
+
+  const unlockTvTurn = async (sid = sessionId, cid = clientId) => {
+    if (!sid) {
+      return;
+    }
+
+    clearTvTimers();
+    isWaitingForTvResponseRef.current = false;
+    setShowTvUnlock(false);
+
+    try {
+      await completeTvTurn(sid);
+    } catch (error) {
+      console.warn("Nie udało się awaryjnie zakończyć tury TV:", error);
+
+      try {
+        await setSessionState(sid, "waiting", "tv");
+      } catch {}
+    }
+
+    setIsProcessing(false);
+    setAvatarState("waiting");
+    setCanRecord(true);
+    setQueuePosition(null);
+    setStatusText("Możesz zadać kolejne pytanie.");
+
+    if (sid && cid) {
+      window.setTimeout(() => {
+        void refreshTvStatus(sid, cid).catch(() => {});
+      }, 700);
+    }
+  };
+
+  const scheduleTvSafetyUnlock = (sid: string, cid: string) => {
+    clearTvTimers();
+
+    isWaitingForTvResponseRef.current = true;
+    setShowTvUnlock(false);
+
+    // Po 15 sekundach pokazujemy ręczny przycisk odblokowania.
+    tvUnlockButtonTimeoutRef.current = window.setTimeout(() => {
+      if (isWaitingForTvResponseRef.current) {
+        setShowTvUnlock(true);
+      }
+    }, 15000);
+
+    // Po 35 sekundach telefon sam awaryjnie odblokuje turę.
+    tvSafetyTimeoutRef.current = window.setTimeout(() => {
+      if (isWaitingForTvResponseRef.current) {
+        void unlockTvTurn(sid, cid);
+      }
+    }, 35000);
   };
 
   useEffect(() => {
@@ -191,6 +267,7 @@ function PhonePageContent() {
         window.clearInterval(statusInterval);
       }
 
+      clearTvTimers();
       stopAudioPlayback();
       void cleanupAudioResources();
     };
@@ -202,6 +279,9 @@ function PhonePageContent() {
     }
 
     isRecordingTurnRef.current = true;
+    isWaitingForTvResponseRef.current = false;
+    clearTvTimers();
+    setShowTvUnlock(false);
     stopAudioPlayback();
     setPendingAudioSrc(null);
 
@@ -230,7 +310,9 @@ function PhonePageContent() {
         void setSessionState(sessionId, "waiting", "tv").catch(() => {});
       }
 
-      setStatusText("Nie udało się włączyć mikrofonu. Upewnij się, że strona działa po HTTPS.");
+      setStatusText(
+        "Nie udało się włączyć mikrofonu. Upewnij się, że strona działa po HTTPS."
+      );
     }
   };
 
@@ -281,8 +363,12 @@ function PhonePageContent() {
       }
 
       if (isTvMicMode) {
-        setStatusText("Odpowiedź Eriona odtworzy się na TV.");
+        setCanRecord(false);
+        setQueuePosition(null);
+        setStatusText("Odpowiedź Eriona odtworzy się na TV. Poczekaj chwilę.");
         setAvatarState("waiting");
+
+        scheduleTvSafetyUnlock(sessionId, clientId);
 
         window.setTimeout(() => {
           void refreshTvStatus(sessionId, clientId).catch(() => {});
@@ -302,6 +388,9 @@ function PhonePageContent() {
     } catch (error) {
       console.error("Send voice error", error);
 
+      clearTvTimers();
+      isWaitingForTvResponseRef.current = false;
+      setShowTvUnlock(false);
       setAvatarState("waiting");
       setStatusText("Wystąpił błąd. Spróbuj jeszcze raz.");
 
@@ -336,44 +425,97 @@ function PhonePageContent() {
     ? `Kolejka: ${queuePosition}`
     : "Poczekaj";
 
-  const buttonColor = isRecording
-    ? "#dc2626"
+  const buttonBackground = isRecording
+    ? "linear-gradient(135deg, #dc2626 0%, #ff1c2d 100%)"
     : isProcessing || !canRecord
-    ? "#b9b9b9"
-    : "#2d6a4f";
+    ? "rgba(255, 255, 255, 0.24)"
+    : "linear-gradient(135deg, #ff4a1c 0%, #ff1c2d 100%)";
+
+  const screenBackground =
+    "radial-gradient(circle at 88% 24%, rgba(255, 74, 28, 0.46), transparent 34%), radial-gradient(circle at 95% 92%, rgba(255, 28, 45, 0.24), transparent 42%), radial-gradient(circle at 15% 14%, rgba(255, 255, 255, 0.07), transparent 28%), linear-gradient(135deg, #0B0B12 0%, #151016 42%, #2A0D08 72%, #5A160B 100%)";
+
+  const cardStyle = {
+    width: "100%",
+    maxWidth: 430,
+    minHeight: isTvMicMode ? "calc(100svh - 48px)" : "auto",
+    display: "flex",
+    flexDirection: "column" as const,
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 22,
+    textAlign: "center" as const,
+    padding: "30px 22px",
+    borderRadius: 32,
+    border: "1px solid rgba(255, 255, 255, 0.14)",
+    background: "rgba(255, 255, 255, 0.075)",
+    boxShadow: "0 24px 60px rgba(0, 0, 0, 0.35)",
+    backdropFilter: "blur(18px)",
+    boxSizing: "border-box" as const,
+  };
+
+  const mainStyle = {
+    minHeight: "100svh",
+    background: screenBackground,
+    color: "#ffffff",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    padding: 20,
+    boxSizing: "border-box" as const,
+    fontFamily: "Arial, sans-serif",
+    position: "relative" as const,
+    overflow: "hidden",
+  };
+
+  const dotsLayer = (
+    <div
+      aria-hidden="true"
+      style={{
+        position: "absolute",
+        inset: 0,
+        backgroundImage:
+          "radial-gradient(rgba(255, 255, 255, 0.12) 1px, transparent 1px)",
+        backgroundSize: "14px 14px",
+        opacity: 0.22,
+        pointerEvents: "none",
+      }}
+    />
+  );
 
   if (isTvMicMode) {
     return (
-      <main
-        style={{
-          minHeight: "100vh",
-          background: "#f5f5f5",
-          color: "#111827",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          padding: 24,
-          boxSizing: "border-box",
-          fontFamily: "Arial, sans-serif",
-        }}
-      >
+      <main style={mainStyle}>
+        {dotsLayer}
+
         <div
           style={{
-            width: "100%",
-            maxWidth: 420,
-            display: "flex",
-            flexDirection: "column",
-            alignItems: "center",
-            gap: 24,
-            textAlign: "center",
+            position: "relative",
+            zIndex: 1,
+            ...cardStyle,
           }}
         >
           <div>
+            <div
+              style={{
+                marginBottom: 8,
+                fontSize: 12,
+                fontWeight: 900,
+                letterSpacing: "0.34em",
+                color: "rgba(255, 255, 255, 0.48)",
+                textTransform: "uppercase",
+              }}
+            >
+              Model głosowy AI
+            </div>
+
             <h1
               style={{
-                fontSize: 34,
+                fontSize: 36,
                 margin: 0,
-                fontWeight: 800,
+                fontWeight: 950,
+                letterSpacing: "-0.045em",
+                lineHeight: 0.95,
+                color: "#ffffff",
               }}
             >
               Mikrofon TV
@@ -381,31 +523,35 @@ function PhonePageContent() {
 
             <p
               style={{
-                margin: "10px 0 0",
-                fontSize: 17,
+                margin: "12px 0 0",
+                fontSize: 16,
                 lineHeight: 1.4,
-                color: "#4b5563",
+                color: "rgba(255, 255, 255, 0.72)",
               }}
             >
-              Ten telefon działa jako mikrofon do rozmowy z Erionem na ekranie TV.
-              Odpowiedź pojawi się głosowo na TV.
+              Ten telefon działa jako mikrofon do rozmowy z Erionem na ekranie
+              TV. Odpowiedź pojawi się głosowo na TV.
             </p>
           </div>
 
           <div
             style={{
-              width: 118,
-              height: 118,
+              width: 122,
+              height: 122,
               borderRadius: "50%",
-              background: isRecording ? "#dc2626" : canRecord ? "#111827" : "#d1d5db",
+              background: isRecording
+                ? "linear-gradient(135deg, #dc2626 0%, #ff1c2d 100%)"
+                : canRecord
+                ? "linear-gradient(135deg, rgba(255, 74, 28, 0.95), rgba(255, 28, 45, 0.95))"
+                : "rgba(255, 255, 255, 0.18)",
               color: "#ffffff",
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
-              fontSize: 48,
+              fontSize: 50,
               boxShadow: isRecording
-                ? "0 0 0 14px rgba(220, 38, 38, 0.18)"
-                : "0 20px 45px rgba(15, 23, 42, 0.18)",
+                ? "0 0 0 14px rgba(255, 28, 45, 0.18), 0 22px 50px rgba(0, 0, 0, 0.35)"
+                : "0 22px 50px rgba(0, 0, 0, 0.35)",
             }}
           >
             🎙️
@@ -420,30 +566,57 @@ function PhonePageContent() {
             style={{
               padding: "18px 28px",
               fontSize: 22,
-              borderRadius: 18,
-              border: "none",
+              borderRadius: 20,
+              border: "1px solid rgba(255, 255, 255, 0.18)",
               cursor:
-                isProcessing || !canRecord || !sessionId ? "not-allowed" : "pointer",
-              background: buttonColor,
+                isProcessing || !canRecord || !sessionId
+                  ? "not-allowed"
+                  : "pointer",
+              background: buttonBackground,
               color: "#fff",
               minWidth: 280,
-              fontWeight: 800,
+              fontWeight: 900,
               touchAction: "manipulation",
               userSelect: "none",
               WebkitUserSelect: "none",
+              boxShadow:
+                isProcessing || !canRecord
+                  ? "none"
+                  : "0 16px 36px rgba(255, 56, 28, 0.32)",
+              opacity: isProcessing || !canRecord || !sessionId ? 0.72 : 1,
             }}
           >
             {buttonLabel}
           </button>
+
+          {showTvUnlock && (
+            <button
+              type="button"
+              onClick={() => void unlockTvTurn()}
+              style={{
+                border: "1px solid rgba(255, 255, 255, 0.2)",
+                borderRadius: 999,
+                padding: "13px 18px",
+                background: "rgba(255, 255, 255, 0.13)",
+                color: "#ffffff",
+                fontSize: 15,
+                fontWeight: 900,
+                boxShadow: "0 12px 30px rgba(0, 0, 0, 0.22)",
+              }}
+            >
+              Odblokuj i zadaj kolejne pytanie
+            </button>
+          )}
 
           <p
             style={{
               minHeight: 52,
               maxWidth: 360,
               margin: 0,
-              fontSize: 18,
+              fontSize: 17,
               lineHeight: 1.4,
-              color: connectionError ? "#b91c1c" : "#111827",
+              color: connectionError ? "#fecaca" : "rgba(255, 255, 255, 0.82)",
+              fontWeight: 700,
             }}
           >
             {connectionError || statusText}
@@ -454,9 +627,10 @@ function PhonePageContent() {
               style={{
                 padding: "12px 16px",
                 borderRadius: 16,
-                background: "#fef3c7",
-                color: "#92400e",
-                fontWeight: 700,
+                background: "rgba(255, 255, 255, 0.12)",
+                color: "#ffffff",
+                fontWeight: 800,
+                border: "1px solid rgba(255, 255, 255, 0.16)",
               }}
             >
               Twoje miejsce w kolejce: {queuePosition}
@@ -468,31 +642,43 @@ function PhonePageContent() {
   }
 
   return (
-    <main
-      style={{
-        minHeight: "100vh",
-        background: "#f5f5f5",
-        color: "#111827",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        padding: 20,
-        boxSizing: "border-box",
-        fontFamily: "Arial, sans-serif",
-      }}
-    >
+    <main style={mainStyle}>
+      {dotsLayer}
+
       <div
         style={{
-          width: "100%",
+          position: "relative",
+          zIndex: 1,
+          ...cardStyle,
           maxWidth: 520,
-          display: "flex",
-          flexDirection: "column",
-          alignItems: "center",
-          gap: 18,
-          textAlign: "center",
         }}
       >
-        <h1 style={{ fontSize: 30, margin: 0, fontWeight: 800 }}>{pageTitle}</h1>
+        <div>
+          <div
+            style={{
+              marginBottom: 8,
+              fontSize: 12,
+              fontWeight: 900,
+              letterSpacing: "0.34em",
+              color: "rgba(255, 255, 255, 0.48)",
+              textTransform: "uppercase",
+            }}
+          >
+            Wersja mobilna
+          </div>
+
+          <h1
+            style={{
+              fontSize: 32,
+              margin: 0,
+              fontWeight: 950,
+              letterSpacing: "-0.04em",
+              color: "#ffffff",
+            }}
+          >
+            {pageTitle}
+          </h1>
+        </div>
 
         <Avatar state={avatarState} variant="phone" size="phone" />
 
@@ -505,17 +691,24 @@ function PhonePageContent() {
           style={{
             padding: "18px 28px",
             fontSize: 22,
-            borderRadius: 18,
-            border: "none",
+            borderRadius: 20,
+            border: "1px solid rgba(255, 255, 255, 0.18)",
             cursor:
-              isProcessing || !canRecord || !sessionId ? "not-allowed" : "pointer",
-            background: buttonColor,
+              isProcessing || !canRecord || !sessionId
+                ? "not-allowed"
+                : "pointer",
+            background: buttonBackground,
             color: "#fff",
             minWidth: 280,
-            fontWeight: 800,
+            fontWeight: 900,
             touchAction: "manipulation",
             userSelect: "none",
             WebkitUserSelect: "none",
+            boxShadow:
+              isProcessing || !canRecord
+                ? "none"
+                : "0 16px 36px rgba(255, 56, 28, 0.32)",
+            opacity: isProcessing || !canRecord || !sessionId ? 0.72 : 1,
           }}
         >
           {buttonLabel}
@@ -526,13 +719,13 @@ function PhonePageContent() {
             type="button"
             onClick={handlePlayPendingAudio}
             style={{
-              border: "none",
+              border: "1px solid rgba(255, 255, 255, 0.2)",
               borderRadius: 999,
               padding: "14px 22px",
-              background: "#111827",
+              background: "rgba(255, 255, 255, 0.13)",
               color: "#ffffff",
               fontSize: 18,
-              fontWeight: 800,
+              fontWeight: 900,
             }}
           >
             Odtwórz odpowiedź
@@ -546,7 +739,8 @@ function PhonePageContent() {
             margin: 0,
             fontSize: 16,
             lineHeight: 1.4,
-            color: connectionError ? "#b91c1c" : "#111827",
+            color: connectionError ? "#fecaca" : "rgba(255, 255, 255, 0.82)",
+            fontWeight: 700,
           }}
         >
           {connectionError || statusText}

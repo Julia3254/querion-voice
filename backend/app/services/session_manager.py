@@ -2,12 +2,17 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from threading import Lock
+from time import monotonic
 from typing import Literal, Optional
 from uuid import uuid4
 
 from app.schemas.voice import AvatarState
 
 SessionKind = Literal["phone", "tv"]
+
+# Ostateczne zabezpieczenie backendu.
+# Jeśli TV/frontend nie zakończy tury, backend odblokuje sesję po 60 sekundach.
+TV_BUSY_TIMEOUT_SECONDS = 60
 
 
 @dataclass
@@ -18,6 +23,7 @@ class Session:
     active_client_id: Optional[str] = None
     queue: list[str] = field(default_factory=list)
     busy: bool = False
+    busy_started_at: Optional[float] = None
 
     response_id: int = 0
     answer_audio_url: Optional[str] = None
@@ -36,7 +42,12 @@ class SessionManager:
 
     def get(self, session_id: str) -> Optional[Session]:
         with self._lock:
-            return self._sessions.get(session_id)
+            session = self._sessions.get(session_id)
+
+            if session:
+                self._release_stale_busy_locked(session)
+
+            return session
 
     def set_state(
         self,
@@ -50,10 +61,13 @@ class SessionManager:
             if not session:
                 return None
 
+            self._release_stale_busy_locked(session)
+
             session.state = state
 
             if busy is not None:
                 session.busy = busy
+                session.busy_started_at = monotonic() if busy else None
 
             return session
 
@@ -68,12 +82,24 @@ class SessionManager:
             if not session:
                 return None
 
+            self._release_stale_busy_locked(session)
+
             session.response_id += 1
             session.answer_audio_url = answer_audio_url
             session.state = "speaking" if answer_audio_url else "waiting"
 
-            if not answer_audio_url:
+            if session.kind == "tv":
+                if answer_audio_url:
+                    # Od tego momentu TV ma czas na odtworzenie odpowiedzi.
+                    # Jeśli tego nie zrobi, backend awaryjnie odblokuje turę.
+                    session.busy = True
+                    session.busy_started_at = monotonic()
+                else:
+                    session.busy = False
+                    session.busy_started_at = None
+            elif not answer_audio_url:
                 session.busy = False
+                session.busy_started_at = None
 
             return session
 
@@ -87,6 +113,8 @@ class SessionManager:
 
             if not session:
                 raise KeyError("Session not found")
+
+            self._release_stale_busy_locked(session)
 
             has_new_response = session.response_id > last_response_id
 
@@ -104,6 +132,8 @@ class SessionManager:
 
             if not session or session.kind != "tv":
                 raise KeyError("TV session not found")
+
+            self._release_stale_busy_locked(session)
 
             if session.active_client_id == client_id:
                 return self._status_for_client(session, client_id)
@@ -131,6 +161,8 @@ class SessionManager:
             if not session:
                 raise KeyError("Session not found")
 
+            self._release_stale_busy_locked(session)
+
             if (
                 session.kind == "tv"
                 and client_id
@@ -156,6 +188,8 @@ class SessionManager:
             if not session or session.kind != "tv" or not client_id:
                 return False
 
+            self._release_stale_busy_locked(session)
+
             if not session.busy and session.active_client_id != client_id:
                 session.active_client_id = client_id
                 session.queue = [item for item in session.queue if item != client_id]
@@ -173,10 +207,13 @@ class SessionManager:
             if not session:
                 return None
 
+            self._release_stale_busy_locked(session)
+
             if session.kind == "tv" and session.active_client_id != client_id:
                 return None
 
             session.busy = True
+            session.busy_started_at = monotonic()
             session.state = "thinking"
 
             return session
@@ -188,13 +225,39 @@ class SessionManager:
             if not session or session.kind != "tv":
                 raise KeyError("TV session not found")
 
-            session.busy = False
-            session.state = "waiting"
-
-            if session.queue:
-                session.active_client_id = session.queue.pop(0)
+            self._complete_tv_turn_locked(session)
 
             return self._status_for_client(session, session.active_client_id)
+
+    def _complete_tv_turn_locked(self, session: Session) -> None:
+        session.busy = False
+        session.busy_started_at = None
+        session.state = "waiting"
+
+        # Czyścimy stare audio, żeby po odświeżeniu TV nie próbował grać starej odpowiedzi.
+        session.answer_audio_url = None
+
+        if session.queue:
+            session.active_client_id = session.queue.pop(0)
+
+    def _release_stale_busy_locked(self, session: Session) -> None:
+        if session.kind != "tv":
+            return
+
+        if not session.busy or session.busy_started_at is None:
+            return
+
+        elapsed = monotonic() - session.busy_started_at
+
+        if elapsed < TV_BUSY_TIMEOUT_SECONDS:
+            return
+
+        print(
+            f"[session_manager] Awaryjne odblokowanie sesji TV {session.id} "
+            f"po {elapsed:.1f}s."
+        )
+
+        self._complete_tv_turn_locked(session)
 
     def _status_for_client(
         self,
