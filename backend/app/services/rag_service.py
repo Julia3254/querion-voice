@@ -48,10 +48,15 @@ AI_QUERY_HINTS = {
 }
 
 PROJECT_QUERY_HINTS = {
-    "querion", "quera", "erion", "wystawa", "ekspozycja", "firma", "atrakcja", "park",
-    "avatar", "awatar", "stanowisko", "stacja", "tutaj", "bilet", "bilety", "cena", "ceny",
-    "koszt", "kosztuje", "godziny", "otwarte", "otwarcie", "parking", "pies", "psem",
-    "dostępność", "dostepnosc", "klient", "partner", "demo", "instalacja",
+    "querion", "quera", "erion",
+    "ai touch", "flying theater", "immersive experience", "cinema 5d",
+    "explorer 270", "circulum 360", "racing",
+    "wystawa", "ekspozycja", "stanowisko", "stacja",
+    "avatar", "awatar",
+    "bilet", "bilety", "cena", "ceny", "koszt", "kosztuje",
+    "godziny", "otwarte", "otwarcie",
+    "parking", "pies", "psem", "dostępność", "dostepnosc",
+    "klient", "partner", "demo", "instalacja",
 }
 
 VOICE_QUERY_HINTS = {
@@ -61,20 +66,23 @@ VOICE_QUERY_HINTS = {
 }
 
 VOICE_QUERY_PHRASES = {
-    "jak działa rozmowa", "jak dziala rozmowa", "jak działa mowa", "jak dziala mowa",
-    "jak działa głos", "jak dziala glos", "jak działa mikrofon", "jak dziala mikrofon",
-    "jak rozmawiać", "jak rozmawiac", "z tobą", "z toba", "co potrafisz",
-    "kim jesteś", "kim jestes", "jak mam zacząć", "jak mam zaczac",
-    "co mogę zrobić", "co moge zrobic", "co można robić", "co mozna robic",
-    "co tu można robić", "co tu mozna robic", "co tutaj można robić", "co tutaj mozna robic",
-    "co tu robić", "co tu robic", "co tutaj robić", "co tutaj robic",
+    "jak działa rozmowa", "jak dziala rozmowa",
+    "jak działa mowa", "jak dziala mowa",
+    "jak działa głos", "jak dziala glos",
+    "jak działa mikrofon", "jak dziala mikrofon",
+    "jak rozmawiać", "jak rozmawiac",
+    "z tobą", "z toba",
+    "co potrafisz",
+    "kim jesteś", "kim jestes",
+    "jak mam zacząć", "jak mam zaczac",
 }
 
-FALLBACK_LIFESTYLE_QUERIES = {
-    "co robic", "co robić", "co mam zrobić", "co mam zrobic", "jak zyc", "jak żyć",
-    "co polecasz", "powiedz cos", "powiedz coś", "pogadaj", "porozmawiaj",
-    "pomoz", "pomóż", "mam pytanie", "nie wiem", "nie mam energii", "nie mam motywacji",
-    "za dużo telefonu", "za duzo telefonu", "lepiej się uczyć", "lepiej sie uczyc",
+GENERAL_QUERY_HINTS = {
+    "nudze", "nudzę", "lato", "latem", "zima", "zimą", "weekend", "wakacje",
+    "piechowice", "karkonosze", "podróż", "podroz", "wycieczka", "spacer",
+    "pomysł", "pomysl", "pomysły", "pomysly", "robić", "robic",
+    "angielski", "matematyka", "historia", "kosmos", "film", "książka", "ksiazka",
+    "muzyka", "gra", "gry", "internet", "komputer", "telefon",
 }
 
 TOPIC_HINTS: dict[str, set[str]] = {
@@ -163,16 +171,19 @@ def _query_category(question: str) -> str:
     normalized = _normalize(question)
     query_tokens = _tokens(question)
 
-    if _contains_any(normalized, PROJECT_QUERY_HINTS | VOICE_QUERY_HINTS | VOICE_QUERY_PHRASES):
+    # Najpierw tylko konkretne pytania o Querion / Eriona / wystawę.
+    # Nie wrzucamy tu ogólnych pytań typu "co mogę robić latem".
+    if _contains_any(normalized, PROJECT_QUERY_HINTS):
+        return "project"
+
+    # Pytania o samą rozmowę z avatarem też traktujemy jako projekt.
+    if _contains_any(normalized, VOICE_QUERY_PHRASES):
         return "project"
 
     if _token_overlap(query_tokens, AI_QUERY_HINTS) or _contains_any(normalized, AI_QUERY_HINTS):
         return "ai"
 
     if _token_overlap(query_tokens, LIFESTYLE_QUERY_HINTS) or _contains_any(normalized, LIFESTYLE_QUERY_HINTS):
-        return "lifestyle"
-
-    if any(_normalize(phrase) in normalized for phrase in FALLBACK_LIFESTYLE_QUERIES):
         return "lifestyle"
 
     return "general"
@@ -371,7 +382,6 @@ def _load_internet_cache_sections() -> tuple[RagSection, ...]:
 
 
 def _score_section(question: str, section: RagSection) -> int:
-    normalized_question = _normalize(question)
     query_tokens = _tokens(question)
 
     searchable = _normalize(
@@ -389,14 +399,15 @@ def _score_section(question: str, section: RagSection) -> int:
     category = _query_category(question)
     score = 0
 
-    for token in query_tokens:
+    token_list = list(query_tokens)
+
+    for token in token_list:
         if token in searchable_tokens:
             score += 8
         elif token in searchable:
             score += 4
 
-    for i in range(len(list(query_tokens)) - 1):
-        token_list = list(query_tokens)
+    for i in range(len(token_list) - 1):
         phrase = f"{token_list[i]} {token_list[i + 1]}"
 
         if phrase in searchable:
@@ -436,12 +447,12 @@ def _score_section(question: str, section: RagSection) -> int:
             score += 8
 
     elif category == "ai":
-        if section.topic == "ai" or "ai" in _normalize(section.source_name) or "ciekawostki" in _normalize(section.source_name):
+        if (
+            section.topic == "ai"
+            or "ai" in _normalize(section.source_name)
+            or "ciekawostki" in _normalize(section.source_name)
+        ):
             score += 28
-
-    elif category == "general":
-        if any(_normalize(phrase) in normalized_question for phrase in FALLBACK_LIFESTYLE_QUERIES):
-            score += 10
 
     score += max(0, min(section.priority, 10))
     return score
@@ -504,6 +515,8 @@ def get_context_for_question(question: str) -> Dict[str, object]:
         ]
 
     else:
+        # Dla zwykłych pytań ogólnych RAG nie jest wymagany.
+        # Możemy dać kontekst, jeśli przypadkiem pasuje, ale brak kontekstu nie blokuje modelu.
         candidate_sections = raw_sections + internet_sections
 
     scored: list[tuple[int, RagSection]] = []

@@ -80,9 +80,9 @@ def process_question(
 
     # Najważniejsza logika:
     # - project bez RAG = odmowa, żeby Erion nie zmyślał faktów o Querionie,
-    # - general bez RAG = odmowa, bo to temat poza zakresem,
-    # - lifestyle oraz ai mogą iść do normalnego modelu OpenAI nawet bez RAG.
-    if not has_context and category in {"project", "general"}:
+    # - general/lifestyle/ai/travel/education/technology itd. = normalny model OpenAI,
+    # - tematy zakazane są blokowane wcześniej przez exclusion_service.
+    if not has_context and category == "project":
         answer_text = get_fallback_response()
         audio_url = generate_speech(answer_text, target)
 
