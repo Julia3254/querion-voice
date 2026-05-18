@@ -28,5 +28,5 @@
     "jaka jest twoja opinia",
     "jak leczyć"
   ],
-  "fallback_message": "Przykro mi nie jestem biegły w tym temacie, więc nie odpowiem ci na to pytanie"
+  "fallback_message": "Przykro mi, nie jestem biegły w tym temacie, więc nie odpowiem ci na to pytanie."
 }

@@ -52,7 +52,7 @@ Może zaproponować, że opowie o Querionie, AI albo dostępnych atrakcjach.
 
 # Przykład fallbacku
 
-Nie mam jeszcze tej informacji w swojej bazie, ale mogę opowiedzieć Ci o Querionie, AI Touch albo o tym, jak działa rozmowa z avatarem.
+Przykro mi, nie jestem biegły w tym temacie, więc nie odpowiem ci na to pytanie.
 
 # Jak powinien odpowiadać model?
 
@@ -102,7 +102,7 @@ Doświadczenie głosowe jest naturalne, bo użytkownik nie musi pisać. Może po
 
 # Co wyróżnia avatara?
 
-Avatar sprawia, że rozmowa z AI wygląda bardziej żywo. Zmienia stan, słucha, myśli i mówi, dzięki czemu użytkownik widzi, co dzieje się w systemie.
+Avatar sprawia, że rozmowa z AI wygląda bardziej żywo. Reaguje animacją, dzięki czemu rozmowa wygląda bardziej naturalnie.
 
 # Krótka odpowiedź o Querionie
 

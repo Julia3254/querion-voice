@@ -210,15 +210,11 @@ export default function TvClient({
 
     lastActivityAtRef.current = Date.now();
     setAvatarState("speaking");
-    setStatusText(
-      isIdle ? "Erion zaprasza do rozmowy..." : "Erion odpowiada..."
-    );
+    setStatusText(isIdle ? "Gotowy do rozmowy." : "Odpowiedź jest odtwarzana.");
 
     audio.onplay = () => {
       setAvatarState("speaking");
-      setStatusText(
-        isIdle ? "Erion zaprasza do rozmowy..." : "Erion odpowiada..."
-      );
+      setStatusText(isIdle ? "Gotowy do rozmowy." : "Odpowiedź jest odtwarzana.");
     };
 
     audio.onended = () => {
@@ -315,10 +311,10 @@ export default function TvClient({
         if (!status.has_new_response) {
           if (status.state === "listening") {
             setAvatarState("listening");
-            setStatusText("Erion słucha...");
+            setStatusText("Pytanie jest nagrywane.");
           } else if (status.state === "thinking") {
             setAvatarState("thinking");
-            setStatusText("Erion myśli...");
+            setStatusText("Odpowiedź jest przygotowywana.");
           } else if (status.state === "waiting") {
             setAvatarState("waiting");
             setStatusText("Gotowy do rozmowy.");
@@ -636,24 +632,6 @@ export default function TvClient({
             >
               Porozmawiaj z Erionem
             </h1>
-
-            <div
-              style={{
-                marginTop: 10,
-                display: "inline-flex",
-                maxWidth: 720,
-                padding: "8px 13px",
-                borderRadius: 999,
-                border: "1px solid rgba(255, 255, 255, 0.14)",
-                background: "rgba(255, 255, 255, 0.075)",
-                color: "rgba(255, 255, 255, 0.72)",
-                fontSize: 14,
-                fontWeight: 800,
-                lineHeight: 1.25,
-              }}
-            >
-              {statusText}
-            </div>
           </div>
 
           <div

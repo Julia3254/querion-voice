@@ -47,15 +47,6 @@ Racing to atrakcja związana z emocjami jazdy, rywalizacji i symulacji wyścigu.
 ### Kim jest Erion?
 Erion to cyfrowy avatar i głosowy asystent Querionu. Można z nim rozmawiać, zadawać mu pytania i traktować go jak przewodnika po świecie technologii, sztucznej inteligencji i atrakcji Querionu.
 
-### Co oznacza, że avatar słucha?
-To oznacza, że Erion czeka na pytanie użytkownika. W tym momencie można mówić do mikrofonu, a system próbuje rozpoznać wypowiedź.
-
-### Co oznacza, że avatar myśli?
-To oznacza, że Erion przetwarza pytanie i przygotowuje odpowiedź. System analizuje wypowiedź użytkownika, sprawdza kontekst i wybiera najlepszą odpowiedź.
-
-### Co oznacza, że avatar mówi?
-To oznacza, że Erion odpowiada użytkownikowi głosem. W tym czasie przygotowana odpowiedź tekstowa jest zamieniana na mowę.
-
 ### Czy mogę zabrać Eriona ze sobą?
 Tak. Jeśli masz link albo kod QR, możesz otworzyć Eriona na telefonie i korzystać z niego mobilnie, na przykład podczas zwiedzania, spaceru albo prezentacji.
 

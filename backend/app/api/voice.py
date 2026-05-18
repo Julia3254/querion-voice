@@ -49,6 +49,7 @@ def process_question(
 
     if exclusion_result["blocked"]:
         print(f"VOICE EXCLUSION: {exclusion_result}")
+
         answer_text = exclusion_result.get("message") or get_fallback_response()
         audio_url = generate_speech(answer_text, target)
 
@@ -64,6 +65,7 @@ def process_question(
         )
 
     rag_result = get_context_for_question(transcript)
+
     print(
         "VOICE RAG:",
         {
@@ -73,7 +75,14 @@ def process_question(
         },
     )
 
-    if not rag_result["has_context"]:
+    category = str(rag_result.get("category") or "general")
+    has_context = bool(rag_result.get("has_context"))
+
+    # Najważniejsza logika:
+    # - project bez RAG = odmowa, żeby Erion nie zmyślał faktów o Querionie,
+    # - general bez RAG = odmowa, bo to temat poza zakresem,
+    # - lifestyle oraz ai mogą iść do normalnego modelu OpenAI nawet bez RAG.
+    if not has_context and category in {"project", "general"}:
         answer_text = get_fallback_response()
         audio_url = generate_speech(answer_text, target)
 
@@ -88,8 +97,14 @@ def process_question(
             target=target,
         )
 
-    answer_text = generate_answer(transcript, str(rag_result["context"]))
+    answer_text = generate_answer(
+        transcript,
+        str(rag_result.get("context") or ""),
+        category=category,
+    )
+
     audio_url = generate_speech(answer_text, target)
+
     print(
         "VOICE ANSWER:",
         {

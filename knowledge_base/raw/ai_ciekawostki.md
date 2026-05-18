@@ -80,7 +80,7 @@ AI, czyli sztuczna inteligencja, to technologia, która potrafi analizować info
 
 # Krótka odpowiedź na: Jak działa rozmowa z avatarem?
 
-Najpierw mówisz do mikrofonu. System zamienia głos na tekst, AI przygotowuje odpowiedź, a potem avatar odtwarza ją głosowo.
+Najpierw mówisz do mikrofonu. System zamienia głos na tekst, AI przygotowuje odpowiedź, a potem słyszysz ją jako naturalny głos.
 
 # Krótka odpowiedź na: Czy AI myśli?
 

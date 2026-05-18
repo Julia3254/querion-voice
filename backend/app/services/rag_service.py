@@ -5,7 +5,7 @@ import re
 from dataclasses import dataclass
 from functools import lru_cache
 from pathlib import Path
-from typing import Any, Dict, Iterable
+from typing import Any, Dict
 
 from app.core.config import settings
 
@@ -20,33 +20,44 @@ STOP_WORDS = {
     "ten", "ta", "te", "tym", "jaki", "jaka", "jakie", "powiedz", "opowiedz", "daj",
     "mozesz", "możesz", "prosze", "proszę", "cos", "coś", "by", "byc", "być", "mam",
     "chce", "chcę", "chcialbym", "chciałbym", "albo", "oraz", "od", "po", "jestem",
-    "mi", "moj", "mój", "moja", "moje", "mogę", "moge", "można", "mozna",
+    "moj", "mój", "moja", "moje", "mogę", "moge", "można", "mozna",
     "bardzo", "troche", "trochę", "dzis", "dziś",
 }
 
 LIFESTYLE_QUERY_HINTS = {
-    "lifestyle", "wellbeing", "samopoczucie", "nawyk", "nawyki", "dzień", "dzien",
-    "odpoczynek", "relaks", "sen", "spanie", "regeneracja", "energia", "zmęczenie", "zmeczenie",
-    "ruch", "spacer", "aktywność", "aktywnosc", "przerwa", "woda", "nawodnienie",
-    "stres", "spokój", "spokoj", "oddech", "koncentracja", "skupienie", "kreatywność",
-    "kreatywnosc", "organizacja", "plan", "rutyna", "telefon", "ekran", "cyfrowy",
+    "lifestyle", "wellbeing", "samopoczucie", "nastrój", "nastroj", "humor",
+    "nawyk", "nawyki", "dzień", "dzien", "poranek", "wieczór", "wieczor",
+    "odpoczynek", "odpocząć", "odpoczac", "relaks", "sen", "spanie", "spać", "spac",
+    "zasnąć", "zasnac", "bezsenność", "bezsennosc", "budzić", "budzic",
+    "regeneracja", "energia", "zmęczenie", "zmeczenie", "zmęczony", "zmeczony",
+    "zmęczona", "zmeczona", "ruch", "spacer", "aktywność", "aktywnosc",
+    "ćwiczenia", "cwiczenia", "przerwa", "woda", "nawodnienie", "jedzenie",
+    "dieta", "posiłek", "posilek", "stres", "spokój", "spokoj", "oddech",
+    "koncentracja", "skupienie", "produktywność", "produktywnosc", "motywacja",
+    "kreatywność", "kreatywnosc", "organizacja", "plan", "planowanie",
+    "rutyna", "nauka", "uczyć", "uczyc", "szkoła", "szkola", "praca",
+    "obowiązki", "obowiazki", "czas", "telefon", "ekran", "powiadomienia",
+    "social", "media", "cyfrowy", "przebodźcowanie", "przebodzcowanie",
 }
 
 AI_QUERY_HINTS = {
-    "ai", "sztuczna", "sztucznej", "inteligencja", "inteligencji", "model", "chatbot", "gpt",
-    "głos", "glos", "rag", "baza", "wiedza", "ciekawostka", "ciekawostkę", "ciekawostke",
-    "technologia", "robot", "algorytm", "automatyzacja",
+    "ai", "sztuczna", "sztucznej", "inteligencja", "inteligencji", "model", "chatbot",
+    "gpt", "rag", "baza", "wiedza", "ciekawostka", "ciekawostkę", "ciekawostke",
+    "technologia", "robot", "algorytm", "automatyzacja", "uczenie", "maszynowe",
+    "neuronowa", "neuronowe", "turing", "prompt", "dane",
 }
 
 PROJECT_QUERY_HINTS = {
-    "querion", "quera", "erion", "wystawa", "ekspozycja", "firma", "atrakcja", "park", "avatar", "awatar",
-    "stanowisko", "stacja", "ekran", "tutaj",
+    "querion", "quera", "erion", "wystawa", "ekspozycja", "firma", "atrakcja", "park",
+    "avatar", "awatar", "stanowisko", "stacja", "tutaj", "bilet", "bilety", "cena", "ceny",
+    "koszt", "kosztuje", "godziny", "otwarte", "otwarcie", "parking", "pies", "psem",
+    "dostępność", "dostepnosc", "klient", "partner", "demo", "instalacja",
 }
 
 VOICE_QUERY_HINTS = {
     "rozmowa", "rozmawiać", "rozmawiac", "mowa", "głos", "glos", "głosowa", "glosowa",
     "mikrofon", "słucha", "slucha", "słuchasz", "sluchasz", "mówisz", "mowisz",
-    "odpowiadasz", "odpowiedź", "odpowiedz", "telefon", "tv", "telewizor",
+    "odpowiadasz", "odpowiedź", "odpowiedz", "tv", "telewizor",
 }
 
 VOICE_QUERY_PHRASES = {
@@ -59,20 +70,23 @@ VOICE_QUERY_PHRASES = {
     "co tu robić", "co tu robic", "co tutaj robić", "co tutaj robic",
 }
 
+FALLBACK_LIFESTYLE_QUERIES = {
+    "co robic", "co robić", "co mam zrobić", "co mam zrobic", "jak zyc", "jak żyć",
+    "co polecasz", "powiedz cos", "powiedz coś", "pogadaj", "porozmawiaj",
+    "pomoz", "pomóż", "mam pytanie", "nie wiem", "nie mam energii", "nie mam motywacji",
+    "za dużo telefonu", "za duzo telefonu", "lepiej się uczyć", "lepiej sie uczyc",
+}
+
 TOPIC_HINTS: dict[str, set[str]] = {
     "sleep": {"sen", "spanie", "regeneracja", "wieczor", "wieczór", "zmęczenie", "zmeczenie", "energia"},
     "movement": {"ruch", "spacer", "aktywność", "aktywnosc", "ćwiczenia", "cwiczenia", "przerwa", "siedzenie"},
     "stress": {"stres", "napięcie", "napiecie", "oddech", "spokój", "spokoj", "relaks", "emocje"},
     "nutrition": {"jedzenie", "dieta", "posiłek", "posilek", "woda", "energia", "odżywianie", "odzywianie"},
     "small_changes": {"nawyk", "nawyki", "rutyna", "zmiana", "motywacja", "krok", "zacząć", "zaczac"},
-    "lifestyle": LIFESTYLE_QUERY_HINTS,
     "digital_wellbeing": {"telefon", "ekran", "powiadomienia", "cyfrowy", "skupienie", "technologia"},
     "ai": AI_QUERY_HINTS,
-}
-
-FALLBACK_LIFESTYLE_QUERIES = {
-    "co robic", "co robić", "jak zyc", "jak żyć", "co polecasz", "powiedz cos", "powiedz coś",
-    "pogadaj", "porozmawiaj", "pomoz", "pomóż", "mam pytanie", "nie wiem",
+    "project": PROJECT_QUERY_HINTS | VOICE_QUERY_HINTS,
+    "lifestyle": LIFESTYLE_QUERY_HINTS,
 }
 
 
@@ -84,189 +98,182 @@ class RagSection:
     content: str
     topic: str = "general"
     priority: int = 5
-    search_text: str = ""
     source_url: str = ""
 
     @property
     def display_source(self) -> str:
-        if self.source_type == "internet":
-            return f"internet:{self.source_name}"
-        return f"raw:{self.source_name}"
+        if self.source_url:
+            return f"{self.source_type}:{self.source_name}:{self.source_url}"
+        return f"{self.source_type}:{self.source_name}"
 
 
 def _normalize(text: str) -> str:
-    return (text or "").lower().strip()
+    text = (text or "").lower()
+    replacements = {
+        "ą": "a",
+        "ć": "c",
+        "ę": "e",
+        "ł": "l",
+        "ń": "n",
+        "ó": "o",
+        "ś": "s",
+        "ź": "z",
+        "ż": "z",
+    }
+
+    for old, new in replacements.items():
+        text = text.replace(old, new)
+
+    text = re.sub(r"[^a-z0-9ąćęłńóśźż ]+", " ", text)
+    text = re.sub(r"\s+", " ", text)
+    return text.strip()
 
 
-def _tokens(text: str) -> list[str]:
-    words = re.findall(r"[a-zA-ZąćęłńóśźżĄĆĘŁŃÓŚŹŻ0-9]+", _normalize(text))
-    return [word for word in words if word not in STOP_WORDS and len(word) > 1]
-
-
-def _fuzzy_contains_any(text: str, hints: set[str]) -> bool:
+def _tokens(text: str) -> set[str]:
     normalized = _normalize(text)
-    tokens = _tokens(text)
 
+    return {
+        token
+        for token in normalized.split()
+        if len(token) >= 3 and token not in STOP_WORDS
+    }
+
+
+def _contains_any(normalized_text: str, hints: set[str]) -> bool:
     for hint in hints:
-        hint_norm = _normalize(hint)
+        normalized_hint = _normalize(hint)
 
-        if hint_norm in normalized:
-            return True
+        if not normalized_hint:
+            continue
 
-        stem = hint_norm[:5]
-
-        if len(stem) >= 4 and any(token.startswith(stem) or stem in token for token in tokens):
+        if normalized_hint in normalized_text:
             return True
 
     return False
 
 
-def _fuzzy_token_overlap(tokens: Iterable[str], hints: set[str]) -> bool:
-    for token in tokens:
-        token_norm = _normalize(token)
+def _token_overlap(tokens: set[str], hints: set[str]) -> bool:
+    normalized_hints = {_normalize(hint) for hint in hints}
+    normalized_hints = {hint for hint in normalized_hints if hint}
 
-        for hint in hints:
-            hint_norm = _normalize(hint)
-
-            if token_norm == hint_norm:
-                return True
-
-            if len(token_norm) >= 5 and len(hint_norm) >= 5:
-                if token_norm[:5] == hint_norm[:5]:
-                    return True
-                if token_norm.startswith(hint_norm[:5]) or hint_norm.startswith(token_norm[:5]):
-                    return True
-
-    return False
+    return bool(tokens & normalized_hints)
 
 
-def _split_markdown_sections(filename: str, content: str) -> list[RagSection]:
+def _query_category(question: str) -> str:
+    normalized = _normalize(question)
+    query_tokens = _tokens(question)
+
+    if _contains_any(normalized, PROJECT_QUERY_HINTS | VOICE_QUERY_HINTS | VOICE_QUERY_PHRASES):
+        return "project"
+
+    if _token_overlap(query_tokens, AI_QUERY_HINTS) or _contains_any(normalized, AI_QUERY_HINTS):
+        return "ai"
+
+    if _token_overlap(query_tokens, LIFESTYLE_QUERY_HINTS) or _contains_any(normalized, LIFESTYLE_QUERY_HINTS):
+        return "lifestyle"
+
+    if any(_normalize(phrase) in normalized for phrase in FALLBACK_LIFESTYLE_QUERIES):
+        return "lifestyle"
+
+    return "general"
+
+
+def _guess_topic(filename: str, title: str, content: str) -> str:
+    text = _normalize(f"{filename} {title} {content[:500]}")
+
+    if _contains_any(text, PROJECT_QUERY_HINTS | VOICE_QUERY_HINTS):
+        return "project"
+
+    if _contains_any(text, AI_QUERY_HINTS):
+        return "ai"
+
+    if _contains_any(text, {"telefon", "ekran", "powiadomienia", "cyfrowy", "technologia"}):
+        return "digital_wellbeing"
+
+    if _contains_any(text, {"sen", "spanie", "regeneracja", "bezsennosc"}):
+        return "sleep"
+
+    if _contains_any(text, {"stres", "relaks", "oddech", "spokoj", "napiecie"}):
+        return "stress"
+
+    if _contains_any(text, {"ruch", "spacer", "aktywnosc", "cwiczenia"}):
+        return "movement"
+
+    if _contains_any(text, {"jedzenie", "dieta", "posilek", "woda", "odzywianie"}):
+        return "nutrition"
+
+    if _contains_any(text, LIFESTYLE_QUERY_HINTS):
+        return "lifestyle"
+
+    return "general"
+
+
+def _split_markdown_sections(text: str, source_name: str, source_type: str) -> list[RagSection]:
     sections: list[RagSection] = []
-    parts = re.split(r"\n(?=#{1,3} )", content)
+    current_title = "Informacje"
+    current_lines: list[str] = []
 
-    for index, part in enumerate(parts):
-        cleaned = part.strip()
+    def flush() -> None:
+        nonlocal current_title, current_lines
 
-        if not cleaned:
-            continue
+        content = "\n".join(current_lines).strip()
 
-        title_match = re.search(r"^#{1,3}\s+(.+)$", cleaned, flags=re.MULTILINE)
-        title = title_match.group(1).strip() if title_match else filename
+        if not content:
+            return
 
-        if title.lower().startswith("krótkie pytania") or title.lower().startswith("krotkie pytania"):
-            continue
-
-        is_project_file = filename in {
-            "firma.md",
-            "ekspozycja.md",
-            "faq.md",
-            "rdzen_asystenta.md",
-            "demo_qa_querion_erion_ai.md",
-        }
-
-        priority = 8 if is_project_file else 6
-        topic = "project" if is_project_file else "general"
-
-        if filename == "lifestyle.md":
-            topic = "lifestyle"
-            priority = 6
-
-        if filename == "ai_ciekawostki.md":
-            topic = "ai"
-            priority = 6
-
-        if len(cleaned) > 1800:
-            paragraphs = [p.strip() for p in re.split(r"\n\s*\n", cleaned) if p.strip()]
-            chunk = ""
-            chunk_index = 0
-
-            for paragraph in paragraphs:
-                if len(chunk) + len(paragraph) > 1400 and chunk:
-                    sections.append(
-                        RagSection(
-                            source_type="raw",
-                            source_name=filename,
-                            title=f"{title} {chunk_index}".strip(),
-                            content=chunk.strip(),
-                            topic=topic,
-                            priority=priority,
-                        )
-                    )
-                    chunk = ""
-                    chunk_index += 1
-
-                chunk += paragraph + "\n\n"
-
-            if chunk.strip():
-                sections.append(
-                    RagSection(
-                        source_type="raw",
-                        source_name=filename,
-                        title=f"{title} {chunk_index}".strip(),
-                        content=chunk.strip(),
-                        topic=topic,
-                        priority=priority,
-                    )
-                )
-        else:
-            sections.append(
-                RagSection(
-                    source_type="raw",
-                    source_name=filename,
-                    title=title or f"{filename}:{index}",
-                    content=cleaned,
-                    topic=topic,
-                    priority=priority,
-                )
+        topic = _guess_topic(source_name, current_title, content)
+        sections.append(
+            RagSection(
+                source_type=source_type,
+                source_name=source_name,
+                title=current_title,
+                content=content,
+                topic=topic,
+                priority=8 if topic == "project" else 5,
             )
+        )
+
+    for line in text.splitlines():
+        if line.lstrip().startswith("#"):
+            flush()
+            current_title = line.lstrip("#").strip() or "Informacje"
+            current_lines = []
+        else:
+            current_lines.append(line)
+
+    flush()
+
+    if not sections and text.strip():
+        topic = _guess_topic(source_name, "Informacje", text)
+        sections.append(
+            RagSection(
+                source_type=source_type,
+                source_name=source_name,
+                title="Informacje",
+                content=text.strip(),
+                topic=topic,
+                priority=8 if topic == "project" else 5,
+            )
+        )
 
     return sections
 
 
-def _iter_jsonl_records(paths: Iterable[Path]) -> Iterable[dict[str, Any]]:
-    for path in paths:
-        if not path.exists():
-            continue
-
-        with path.open("r", encoding="utf-8") as file:
-            for line in file:
-                line = line.strip()
-
-                if not line:
-                    continue
-
-                try:
-                    record = json.loads(line)
-                except json.JSONDecodeError:
-                    continue
-
-                if isinstance(record, dict):
-                    yield record
-
-
 @lru_cache(maxsize=1)
-def _load_internet_cache_sections() -> tuple[RagSection, ...]:
+def _load_raw_sections() -> tuple[RagSection, ...]:
     sections: list[RagSection] = []
-    jsonl_paths = sorted(INTERNET_CACHE_DIR.glob("*.jsonl")) if INTERNET_CACHE_DIR.exists() else []
 
-    for record in _iter_jsonl_records(jsonl_paths):
-        content = str(record.get("content", "")).strip()
+    if not RAW_DIR.exists():
+        return tuple()
 
-        if not content:
+    for path in sorted(RAW_DIR.glob("*.md")):
+        try:
+            text = path.read_text(encoding="utf-8")
+        except Exception as error:
+            print("RAG RAW READ ERROR:", path, repr(error))
             continue
 
-        sections.append(
-            RagSection(
-                source_type="internet",
-                source_name=str(record.get("source_name", "internet")),
-                title=str(record.get("title", record.get("source_name", "internet"))),
-                content=content,
-                topic=str(record.get("topic", "lifestyle")),
-                priority=int(record.get("priority", 5) or 5),
-                search_text=str(record.get("search_text", "")),
-                source_url=str(record.get("source_url", "")),
-            )
-        )
+        sections.extend(_split_markdown_sections(text, path.name, "raw"))
 
     return tuple(sections)
 
@@ -276,87 +283,96 @@ def _load_internet_markdown_sections() -> tuple[RagSection, ...]:
     sections: list[RagSection] = []
 
     if not INTERNET_DIR.exists():
-        return tuple(sections)
+        return tuple()
 
     for path in sorted(INTERNET_DIR.glob("*.md")):
         try:
-            content = path.read_text(encoding="utf-8").strip()
-        except UnicodeDecodeError:
-            content = path.read_text(errors="ignore").strip()
-
-        if not content:
+            text = path.read_text(encoding="utf-8")
+        except Exception as error:
+            print("RAG INTERNET MD READ ERROR:", path, repr(error))
             continue
 
-        for section in _split_markdown_sections(path.name, content):
-            sections.append(
-                RagSection(
-                    source_type="internet",
-                    source_name=path.name,
-                    title=section.title,
-                    content=section.content,
-                    topic="lifestyle" if "lifestyle" in path.name else "ai" if "ai" in path.name else "general",
-                    priority=7,
-                    search_text="lifestyle wellbeing codzienne nawyki AI technologia",
-                )
-            )
+        sections.extend(_split_markdown_sections(text, path.name, "internet"))
 
     return tuple(sections)
+
+
+def _sections_from_cache_payload(payload: Any, source_name: str) -> list[RagSection]:
+    sections: list[RagSection] = []
+
+    if isinstance(payload, dict):
+        possible_lists = []
+
+        for key in ("sections", "results", "items", "documents", "pages"):
+            value = payload.get(key)
+
+            if isinstance(value, list):
+                possible_lists.append(value)
+
+        if not possible_lists:
+            possible_lists.append([payload])
+
+        for items in possible_lists:
+            for item in items:
+                if not isinstance(item, dict):
+                    continue
+
+                title = str(item.get("title") or item.get("name") or "Internet")
+                content = str(
+                    item.get("content")
+                    or item.get("text")
+                    or item.get("snippet")
+                    or item.get("summary")
+                    or ""
+                ).strip()
+
+                if not content:
+                    continue
+
+                source_url = str(item.get("url") or item.get("source_url") or "")
+                topic = _guess_topic(source_name, title, content)
+
+                sections.append(
+                    RagSection(
+                        source_type="internet",
+                        source_name=source_name,
+                        title=title,
+                        content=content,
+                        topic=topic,
+                        priority=4,
+                        source_url=source_url,
+                    )
+                )
+
+    elif isinstance(payload, list):
+        for item in payload:
+            sections.extend(_sections_from_cache_payload(item, source_name))
+
+    return sections
 
 
 @lru_cache(maxsize=1)
-def _load_raw_sections() -> tuple[RagSection, ...]:
+def _load_internet_cache_sections() -> tuple[RagSection, ...]:
     sections: list[RagSection] = []
 
-    if not RAW_DIR.exists():
-        return tuple(sections)
+    if not INTERNET_CACHE_DIR.exists():
+        return tuple()
 
-    for path in sorted(RAW_DIR.glob("*.md")):
+    for path in sorted(INTERNET_CACHE_DIR.glob("*.json")):
         try:
-            content = path.read_text(encoding="utf-8").strip()
-        except UnicodeDecodeError:
-            content = path.read_text(errors="ignore").strip()
+            payload = json.loads(path.read_text(encoding="utf-8"))
+        except Exception as error:
+            print("RAG INTERNET CACHE READ ERROR:", path, repr(error))
+            continue
 
-        if content:
-            sections.extend(_split_markdown_sections(path.name, content))
+        sections.extend(_sections_from_cache_payload(payload, path.name))
 
     return tuple(sections)
 
 
-def _query_category(question: str) -> str:
-    normalized = _normalize(question)
-    tokens = set(_tokens(question))
-
-    if (
-        _fuzzy_token_overlap(tokens, PROJECT_QUERY_HINTS | VOICE_QUERY_HINTS)
-        or _fuzzy_contains_any(normalized, PROJECT_QUERY_HINTS | VOICE_QUERY_HINTS)
-        or any(phrase in normalized for phrase in VOICE_QUERY_PHRASES)
-    ):
-        return "project"
-
-    if _fuzzy_token_overlap(tokens, AI_QUERY_HINTS) or _fuzzy_contains_any(normalized, AI_QUERY_HINTS):
-        return "ai"
-
-    if _fuzzy_token_overlap(tokens, LIFESTYLE_QUERY_HINTS) or _fuzzy_contains_any(normalized, LIFESTYLE_QUERY_HINTS):
-        return "lifestyle"
-
-    if any(term in normalized for term in FALLBACK_LIFESTYLE_QUERIES):
-        return "lifestyle"
-
-    return "general"
-
-
 def _score_section(question: str, section: RagSection) -> int:
-    normalized = _normalize(question)
+    normalized_question = _normalize(question)
     query_tokens = _tokens(question)
-
-    if any(
-        phrase in normalized
-        for phrase in {
-            "co mogę zrobić", "co moge zrobic", "co można robić", "co mozna robic",
-            "co tu", "co tutaj", "na tym stanowisku",
-        }
-    ):
-        query_tokens.extend(["robić", "robic", "zacząć", "zaczac", "rozmawiać", "rozmawiac"])
 
     searchable = _normalize(
         " ".join(
@@ -364,186 +380,170 @@ def _score_section(question: str, section: RagSection) -> int:
                 section.title,
                 section.content,
                 section.topic,
-                section.search_text,
                 section.source_name,
             ]
         )
     )
-    category = _query_category(question)
+    searchable_tokens = _tokens(searchable)
 
+    category = _query_category(question)
     score = 0
 
     for token in query_tokens:
-        if token in searchable:
-            score += 5
-        elif len(token) >= 6 and token[:5] in searchable:
-            score += 3
+        if token in searchable_tokens:
+            score += 8
+        elif token in searchable:
+            score += 4
 
-        if token in _normalize(section.source_name):
-            score += 2
-
-    for i in range(len(query_tokens) - 1):
-        phrase = f"{query_tokens[i]} {query_tokens[i + 1]}"
+    for i in range(len(list(query_tokens)) - 1):
+        token_list = list(query_tokens)
+        phrase = f"{token_list[i]} {token_list[i + 1]}"
 
         if phrase in searchable:
-            score += 7
+            score += 8
 
     topic_hints = TOPIC_HINTS.get(section.topic, set())
 
-    if _fuzzy_token_overlap(query_tokens, topic_hints):
-        score += 28
-
-    if category == "lifestyle":
-        if section.source_type == "internet":
-            score += 16
-
-        if section.topic in {"lifestyle", "movement", "sleep", "stress", "nutrition", "small_changes", "digital_wellbeing"}:
-            score += 22
-
-        if section.source_name == "lifestyle.md":
-            score += 8
-
-    if category == "ai":
-        if section.topic == "ai" or "ai" in _normalize(section.source_name) or "ciekawostki" in _normalize(section.source_name):
-            score += 22
-
-        if section.source_type == "internet":
-            score += 8
+    if topic_hints and _token_overlap(query_tokens, topic_hints):
+        score += 20
 
     if category == "project":
-        if section.source_name in {"firma.md", "ekspozycja.md", "faq.md", "rdzen_asystenta.md", "demo_qa_querion_erion_ai.md"}:
-            score += 28
+        if section.topic == "project" or section.source_name in {
+            "firma.md",
+            "ekspozycja.md",
+            "faq.md",
+            "rdzen_asystenta.md",
+            "demo_qa_querion_erion_ai.md",
+        }:
+            score += 30
 
         if section.source_type == "internet" and section.topic not in {"ai", "digital_wellbeing"}:
-            score -= 8
+            score -= 10
 
-    if category == "general":
-        if section.source_type == "internet" and section.topic in {"lifestyle", "small_changes", "digital_wellbeing"}:
-            score += 10
+    elif category == "lifestyle":
+        if section.topic in {
+            "lifestyle",
+            "movement",
+            "sleep",
+            "stress",
+            "nutrition",
+            "small_changes",
+            "digital_wellbeing",
+        }:
+            score += 28
 
-        if any(term in normalized for term in FALLBACK_LIFESTYLE_QUERIES):
+        if section.source_type == "internet":
+            score += 8
+
+    elif category == "ai":
+        if section.topic == "ai" or "ai" in _normalize(section.source_name) or "ciekawostki" in _normalize(section.source_name):
+            score += 28
+
+    elif category == "general":
+        if any(_normalize(phrase) in normalized_question for phrase in FALLBACK_LIFESTYLE_QUERIES):
             score += 10
 
     score += max(0, min(section.priority, 10))
     return score
 
 
-def _rank_sections(question: str, sections: list[RagSection], min_score: int) -> list[tuple[int, RagSection]]:
-    scored: list[tuple[int, RagSection]] = []
+def _format_context(sections: list[RagSection]) -> str:
+    parts: list[str] = []
 
     for section in sections:
+        parts.append(
+            f"Źródło: {section.display_source}\n"
+            f"Temat: {section.topic}\n"
+            f"{section.content}"
+        )
+
+    return "\n\n---\n\n".join(parts)
+
+
+def get_context_for_question(question: str) -> Dict[str, object]:
+    category = _query_category(question)
+
+    raw_sections = list(_load_raw_sections())
+    internet_sections = list(_load_internet_cache_sections()) + list(_load_internet_markdown_sections())
+
+    min_score = int(getattr(settings, "RAG_MIN_SCORE", 1) or 1)
+    max_sections = int(getattr(settings, "RAG_MAX_SECTIONS", 4) or 4)
+    max_context_chars = int(getattr(settings, "RAG_MAX_CONTEXT_CHARS", 3500) or 3500)
+
+    candidate_sections: list[RagSection] = []
+
+    if category == "project":
+        candidate_sections = raw_sections + [
+            section
+            for section in internet_sections
+            if section.topic in {"ai", "digital_wellbeing"}
+        ]
+
+    elif category == "lifestyle":
+        candidate_sections = [
+            section
+            for section in internet_sections + raw_sections
+            if section.topic in {
+                "lifestyle",
+                "movement",
+                "sleep",
+                "stress",
+                "nutrition",
+                "small_changes",
+                "digital_wellbeing",
+            }
+        ]
+
+    elif category == "ai":
+        candidate_sections = [
+            section
+            for section in internet_sections + raw_sections
+            if section.topic == "ai"
+            or "ai" in _normalize(section.source_name)
+            or "ciekawostki" in _normalize(section.source_name)
+        ]
+
+    else:
+        candidate_sections = raw_sections + internet_sections
+
+    scored: list[tuple[int, RagSection]] = []
+
+    for section in candidate_sections:
         score = _score_section(question, section)
 
         if score >= min_score:
             scored.append((score, section))
 
     scored.sort(key=lambda item: item[0], reverse=True)
-    return scored
 
-
-def _select_unique(
-    scored: list[tuple[int, RagSection]],
-    limit: int,
-    existing_keys: set[str] | None = None,
-) -> list[RagSection]:
-    selected: list[RagSection] = []
-    seen = existing_keys or set()
-    per_source: dict[str, int] = {}
-
-    for _score, section in scored:
-        if len(selected) >= limit:
-            break
-
-        key = f"{section.source_type}:{section.source_name}:{section.content[:160]}"
-
-        if key in seen:
-            continue
-
-        if per_source.get(section.source_name, 0) >= 3:
-            continue
-
-        seen.add(key)
-        per_source[section.source_name] = per_source.get(section.source_name, 0) + 1
-        selected.append(section)
-
-    return selected
-
-
-def _format_context(sections: list[RagSection]) -> str:
-    parts: list[str] = []
-
-    for section in sections:
-        source = section.display_source
-        topic = section.topic
-        parts.append(f"Źródło: {source}\nTemat: {topic}\n{section.content}")
-
-    return "\n\n---\n\n".join(parts)
-
-
-def get_context_for_question(question: str) -> Dict[str, object]:
-    internet_cache_sections = list(_load_internet_cache_sections())
-    internet_md_sections = list(_load_internet_markdown_sections())
-    raw_sections = list(_load_raw_sections())
-
-    internet_sections = internet_cache_sections + internet_md_sections
     selected: list[RagSection] = []
     seen_keys: set[str] = set()
 
-    category = _query_category(question)
-    min_score = max(1, settings.RAG_MIN_SCORE)
+    for _score, section in scored:
+        if len(selected) >= max_sections:
+            break
 
-    if category == "project" and raw_sections:
-        raw_scored = _rank_sections(question, raw_sections, min_score)
-        selected.extend(_select_unique(raw_scored, 4, seen_keys))
+        key = f"{section.source_type}:{section.source_name}:{section.title}:{section.content[:120]}"
 
-    if internet_sections:
-        internet_pool = internet_sections
+        if key in seen_keys:
+            continue
 
-        if category == "ai":
-            ai_pool = [
-                section
-                for section in internet_sections
-                if section.topic in {"ai", "digital_wellbeing"} or "ai" in _normalize(section.source_name)
-            ]
-            internet_pool = ai_pool or internet_sections
-
-        elif category == "project":
-            project_pool = [
-                section
-                for section in internet_sections
-                if section.topic in {"ai", "digital_wellbeing"}
-            ]
-            internet_pool = project_pool or internet_sections
-
-        internet_scored = _rank_sections(question, internet_pool, min_score)
-        internet_limit = max(1, settings.RAG_MAX_SECTIONS - len(selected))
-        selected.extend(_select_unique(internet_scored, internet_limit, seen_keys))
-
-    should_add_raw = len(selected) < 3 or category in {"project", "ai"}
-
-    if raw_sections and should_add_raw:
-        raw_scored = _rank_sections(question, raw_sections, min_score)
-        raw_limit = 4 if category == "project" else 2
-        selected.extend(_select_unique(raw_scored, raw_limit, seen_keys))
-
-    if not selected and internet_sections:
-        general_lifestyle = [
-            section
-            for section in internet_sections
-            if section.topic in {"lifestyle", "small_changes", "digital_wellbeing", "movement", "sleep", "stress"}
-        ]
-        selected.extend(general_lifestyle[: min(4, settings.RAG_MAX_SECTIONS)])
-
-    if not selected and raw_sections:
-        selected.extend(raw_sections[: min(4, settings.RAG_MAX_SECTIONS)])
+        seen_keys.add(key)
+        selected.append(section)
 
     if not selected:
-        return {"has_context": False, "context": "", "sources": []}
+        return {
+            "has_context": False,
+            "context": "",
+            "sources": [],
+            "category": category,
+            "internet_cache_used": bool(_load_internet_cache_sections()),
+        }
 
     context = _format_context(selected)
 
-    if len(context) > settings.RAG_MAX_CONTEXT_CHARS:
-        context = context[: settings.RAG_MAX_CONTEXT_CHARS]
+    if len(context) > max_context_chars:
+        context = context[:max_context_chars]
 
     sources: list[str] = []
 
@@ -558,11 +558,11 @@ def get_context_for_question(question: str) -> Dict[str, object]:
         "context": context,
         "sources": sources,
         "category": category,
-        "internet_cache_used": bool(internet_cache_sections),
+        "internet_cache_used": bool(_load_internet_cache_sections()),
     }
 
 
 def clear_rag_cache() -> None:
-    _load_internet_cache_sections.cache_clear()
-    _load_internet_markdown_sections.cache_clear()
     _load_raw_sections.cache_clear()
+    _load_internet_markdown_sections.cache_clear()
+    _load_internet_cache_sections.cache_clear()

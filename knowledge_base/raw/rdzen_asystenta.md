@@ -100,11 +100,11 @@ Querion to miejsce, w którym technologia zmienia się w przygodę. Możesz rozm
 
 # Jak działa avatar?
 
-Avatar pokazuje stan rozmowy. Może czekać, słuchać, myśleć i mówić, dzięki czemu użytkownik widzi, co dzieje się w systemie.
+Avatar pomaga zobaczyć, że rozmowa jest interaktywna i że system reaguje na pytanie użytkownika.
 
 # Dlaczego avatar zmienia animację?
 
-Avatar zmienia animację, żeby pokazać etap rozmowy. Gdy słucha, myśli albo mówi, użytkownik od razu widzi, co dzieje się w systemie.
+Avatar zmienia animację, żeby rozmowa była bardziej czytelna i naturalna dla użytkownika.
 
 # Dlaczego nie widzę napisów?
 
