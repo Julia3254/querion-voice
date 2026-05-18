@@ -24,6 +24,31 @@ STOP_WORDS = {
     "bardzo", "troche", "trochę", "dzis", "dziś",
 }
 
+BRAND_ALIASES = {
+    "kwerion": "querion",
+    "klerion": "querion",
+    "qwerion": "querion",
+    "quarion": "querion",
+    "kweryon": "querion",
+    "keryon": "querion",
+    "kerion": "querion",
+    "querjon": "querion",
+    "kwerjon": "querion",
+    "querium": "querion",
+    "kwerium": "querion",
+    "queryon": "querion",
+    "kwirion": "querion",
+    "klirion": "querion",
+
+    "kwera": "quera",
+    "qera": "quera",
+    "klera": "quera",
+
+    "eryon": "erion",
+    "erjon": "erion",
+    "erionie": "erion",
+}
+
 LIFESTYLE_QUERY_HINTS = {
     "lifestyle", "wellbeing", "samopoczucie", "nastrój", "nastroj", "humor",
     "nawyk", "nawyki", "dzień", "dzien", "poranek", "wieczór", "wieczor",
@@ -48,9 +73,16 @@ AI_QUERY_HINTS = {
 }
 
 PROJECT_QUERY_HINTS = {
-    "querion", "quera", "erion",
+    "querion", "kwerion", "klerion", "qwerion", "quarion",
+    "kweryon", "keryon", "kerion", "querjon", "kwerjon",
+    "querium", "kwerium", "queryon", "kwirion", "klirion",
+
+    "quera", "kwera", "qera", "klera",
+    "erion", "eryon", "erjon",
+
     "ai touch", "flying theater", "immersive experience", "cinema 5d",
     "explorer 270", "circulum 360", "racing",
+
     "wystawa", "ekspozycja", "stanowisko", "stacja",
     "avatar", "awatar",
     "bilet", "bilety", "cena", "ceny", "koszt", "kosztuje",
@@ -75,14 +107,6 @@ VOICE_QUERY_PHRASES = {
     "co potrafisz",
     "kim jesteś", "kim jestes",
     "jak mam zacząć", "jak mam zaczac",
-}
-
-GENERAL_QUERY_HINTS = {
-    "nudze", "nudzę", "lato", "latem", "zima", "zimą", "weekend", "wakacje",
-    "piechowice", "karkonosze", "podróż", "podroz", "wycieczka", "spacer",
-    "pomysł", "pomysl", "pomysły", "pomysly", "robić", "robic",
-    "angielski", "matematyka", "historia", "kosmos", "film", "książka", "ksiazka",
-    "muzyka", "gra", "gry", "internet", "komputer", "telefon",
 }
 
 TOPIC_HINTS: dict[str, set[str]] = {
@@ -117,6 +141,7 @@ class RagSection:
 
 def _normalize(text: str) -> str:
     text = (text or "").lower()
+
     replacements = {
         "ą": "a",
         "ć": "c",
@@ -132,9 +157,13 @@ def _normalize(text: str) -> str:
     for old, new in replacements.items():
         text = text.replace(old, new)
 
-    text = re.sub(r"[^a-z0-9ąćęłńóśźż ]+", " ", text)
-    text = re.sub(r"\s+", " ", text)
-    return text.strip()
+    text = re.sub(r"[^a-z0-9 ]+", " ", text)
+    text = re.sub(r"\s+", " ", text).strip()
+
+    words = text.split()
+    normalized_words = [BRAND_ALIASES.get(word, word) for word in words]
+
+    return " ".join(normalized_words)
 
 
 def _tokens(text: str) -> set[str]:
@@ -171,8 +200,9 @@ def _query_category(question: str) -> str:
     normalized = _normalize(question)
     query_tokens = _tokens(question)
 
-    # Najpierw tylko konkretne pytania o Querion / Eriona / wystawę.
-    # Nie wrzucamy tu ogólnych pytań typu "co mogę robić latem".
+    # Najpierw konkretne pytania o Querion / Eriona / wystawę.
+    # Dzięki BRAND_ALIASES pytania o Kwerion, Kłerion, Qwerion itd.
+    # będą rozumiane jako pytania o Querion.
     if _contains_any(normalized, PROJECT_QUERY_HINTS):
         return "project"
 

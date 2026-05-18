@@ -78,10 +78,11 @@ def process_question(
     category = str(rag_result.get("category") or "general")
     has_context = bool(rag_result.get("has_context"))
 
-    # Najważniejsza logika:
-    # - project bez RAG = odmowa, żeby Erion nie zmyślał faktów o Querionie,
-    # - general/lifestyle/ai/travel/education/technology itd. = normalny model OpenAI,
-    # - tematy zakazane są blokowane wcześniej przez exclusion_service.
+    # Project bez RAG = odmowa, żeby nie zmyślać faktów o Querionie.
+    # Ogólne pytania bez RAG = normalny model OpenAI.
+    # Persona zależy od targetu:
+    # - target="tv" -> Erion
+    # - target="phone" -> Quera
     if not has_context and category == "project":
         answer_text = get_fallback_response()
         audio_url = generate_speech(answer_text, target)
@@ -101,6 +102,7 @@ def process_question(
         transcript,
         str(rag_result.get("context") or ""),
         category=category,
+        target=target,
     )
 
     audio_url = generate_speech(answer_text, target)
