@@ -38,7 +38,8 @@ class Settings:
     OPENAI_STT_MODEL: str = os.getenv("OPENAI_STT_MODEL", "gpt-4o-mini-transcribe")
     OPENAI_TTS_MODEL: str = os.getenv("OPENAI_TTS_MODEL", "gpt-4o-mini-tts")
     OPENAI_TTS_VOICE: str = os.getenv("OPENAI_TTS_VOICE", "coral")
-    OPENAI_CHAT_MAX_TOKENS: int = _int_env("OPENAI_CHAT_MAX_TOKENS", 120)
+    OPENAI_CHAT_MAX_TOKENS: int = _int_env("OPENAI_CHAT_MAX_TOKENS", 70)
+    VOICE_MAX_ANSWER_CHARS: int = _int_env("VOICE_MAX_ANSWER_CHARS", 160)
     OPENAI_CHAT_TEMPERATURE: float = _float_env("OPENAI_CHAT_TEMPERATURE", 0.15)
     OPENAI_TIMEOUT_SECONDS: float = _float_env("OPENAI_TIMEOUT_SECONDS", 12.0)
 

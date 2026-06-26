@@ -1,9 +1,11 @@
 from pathlib import Path
+import time
 import uuid
 
 from fastapi import APIRouter, File, Form, UploadFile
 from starlette.concurrency import run_in_threadpool
 
+from app.core.config import settings
 from app.schemas.voice import VoiceRequest, VoiceResponse, VoiceTarget
 from app.services.chat_service import generate_answer
 from app.services.event_manager import event_manager
@@ -21,16 +23,51 @@ UPLOAD_DIR = Path("app/temp/uploads")
 UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
 
 
+def limit_answer_for_voice(answer_text: str) -> str:
+    text = " ".join((answer_text or "").split())
+    max_chars = int(getattr(settings, "VOICE_MAX_ANSWER_CHARS", 220))
+
+    if len(text) <= max_chars:
+        return text
+
+    shortened = text[:max_chars].rsplit(" ", 1)[0].strip(" ,;:-")
+
+    sentence_end = max(
+        shortened.rfind("."),
+        shortened.rfind("!"),
+        shortened.rfind("?"),
+    )
+
+    if sentence_end >= 80:
+        shortened = shortened[: sentence_end + 1]
+
+    if not shortened.endswith((".", "!", "?")):
+        shortened += "."
+
+    return shortened
+
+
+def generate_speech_with_timing(answer_text: str, target: VoiceTarget) -> str | None:
+    tts_start = time.perf_counter()
+    audio_url = generate_speech(answer_text, target)
+    print(f"VOICE TTS_TIME={time.perf_counter() - tts_start:.2f}s")
+    return audio_url
+
+
 def process_question(
     transcript: str,
     session_id: str | None = None,
     target: VoiceTarget = "phone",
 ) -> VoiceResponse:
+    total_start = time.perf_counter()
     transcript = transcript.strip()
 
     if not transcript:
         message = "Nie usłyszałem pytania, spróbuj jeszcze raz."
-        audio_url = generate_speech(message, target)
+        message = limit_answer_for_voice(message)
+        audio_url = generate_speech_with_timing(message, target)
+
+        print(f"VOICE TOTAL_PROCESS_TIME={time.perf_counter() - total_start:.2f}s")
 
         return VoiceResponse(
             transcript="",
@@ -51,7 +88,10 @@ def process_question(
         print(f"VOICE EXCLUSION: {exclusion_result}")
 
         answer_text = exclusion_result.get("message") or get_fallback_response()
-        audio_url = generate_speech(answer_text, target)
+        answer_text = limit_answer_for_voice(answer_text)
+        audio_url = generate_speech_with_timing(answer_text, target)
+
+        print(f"VOICE TOTAL_PROCESS_TIME={time.perf_counter() - total_start:.2f}s")
 
         return VoiceResponse(
             transcript=transcript,
@@ -64,7 +104,9 @@ def process_question(
             target=target,
         )
 
+    rag_start = time.perf_counter()
     rag_result = get_context_for_question(transcript)
+    print(f"VOICE RAG_TIME={time.perf_counter() - rag_start:.2f}s")
 
     print(
         "VOICE RAG:",
@@ -78,14 +120,12 @@ def process_question(
     category = str(rag_result.get("category") or "general")
     has_context = bool(rag_result.get("has_context"))
 
-    # Project bez RAG = odmowa, żeby nie zmyślać faktów o Querionie.
-    # Ogólne pytania bez RAG = normalny model OpenAI.
-    # Persona zależy od targetu:
-    # - target="tv" -> Erion
-    # - target="phone" -> Quera
     if not has_context and category == "project":
         answer_text = get_fallback_response()
-        audio_url = generate_speech(answer_text, target)
+        answer_text = limit_answer_for_voice(answer_text)
+        audio_url = generate_speech_with_timing(answer_text, target)
+
+        print(f"VOICE TOTAL_PROCESS_TIME={time.perf_counter() - total_start:.2f}s")
 
         return VoiceResponse(
             transcript=transcript,
@@ -98,6 +138,8 @@ def process_question(
             target=target,
         )
 
+    answer_start = time.perf_counter()
+
     answer_text = generate_answer(
         transcript,
         str(rag_result.get("context") or ""),
@@ -105,16 +147,33 @@ def process_question(
         target=target,
     )
 
-    audio_url = generate_speech(answer_text, target)
+    print(f"VOICE OPENAI_TIME={time.perf_counter() - answer_start:.2f}s")
+
+    original_answer_length = len(answer_text or "")
+    answer_text = limit_answer_for_voice(answer_text)
+
+    if len(answer_text) != original_answer_length:
+        print(
+            "VOICE ANSWER_LIMITED:",
+            {
+                "original_chars": original_answer_length,
+                "limited_chars": len(answer_text),
+            },
+        )
+
+    audio_url = generate_speech_with_timing(answer_text, target)
 
     print(
         "VOICE ANSWER:",
         {
             "target": target,
+            "answer_chars": len(answer_text),
             "answer_text": answer_text,
             "audio_url": audio_url,
         },
     )
+
+    print(f"VOICE TOTAL_PROCESS_TIME={time.perf_counter() - total_start:.2f}s")
 
     return VoiceResponse(
         transcript=transcript,
@@ -122,7 +181,7 @@ def process_question(
         answer_audio_url=audio_url,
         animation_state="speaking" if audio_url else "waiting",
         fallback_used=False,
-        sources=rag_result["sources"],
+        sources=rag_result.get("sources", []),
         session_id=session_id,
         target=target,
     )
@@ -136,7 +195,7 @@ async def _broadcast_state(
     if not session_id:
         return
 
-    session_manager.set_state(session_id, state)  # type: ignore[arg-type]
+    session_manager.set_state(session_id, state)
 
     payload = {
         "type": "state",
@@ -159,7 +218,7 @@ async def _broadcast_voice_response(
 
     state = "speaking" if answer_audio_url else "waiting"
 
-    session_manager.set_state(session_id, state)  # type: ignore[arg-type]
+    session_manager.set_state(session_id, state)
 
     if hasattr(session_manager, "set_last_response"):
         session_manager.set_last_response(session_id, answer_audio_url)
@@ -177,9 +236,17 @@ async def _broadcast_voice_response(
 
 @router.post("/idle", response_model=VoiceResponse)
 async def handle_idle_voice(request: VoiceRequest):
+    total_start = time.perf_counter()
+
     target = request.target or "tv"
     phrase = choose_idle_phrase(target)
-    audio_url = await run_in_threadpool(generate_speech, phrase, target)
+    phrase = limit_answer_for_voice(phrase)
+
+    audio_url = await run_in_threadpool(
+        generate_speech_with_timing,
+        phrase,
+        target,
+    )
 
     if request.session_id:
         await _broadcast_state(
@@ -187,6 +254,8 @@ async def handle_idle_voice(request: VoiceRequest):
             "speaking" if audio_url else "waiting",
             {"target": target, "idle": True},
         )
+
+    print(f"VOICE IDLE_TOTAL_TIME={time.perf_counter() - total_start:.2f}s")
 
     return VoiceResponse(
         transcript="",
@@ -202,6 +271,7 @@ async def handle_idle_voice(request: VoiceRequest):
 
 @router.post("/text", response_model=VoiceResponse)
 async def handle_voice_text(request: VoiceRequest):
+    total_start = time.perf_counter()
     target = request.target
 
     if request.session_id:
@@ -221,6 +291,8 @@ async def handle_voice_text(request: VoiceRequest):
             result.answer_audio_url,
         )
 
+    print(f"VOICE TEXT_ENDPOINT_TOTAL_TIME={time.perf_counter() - total_start:.2f}s")
+
     return result
 
 
@@ -231,9 +303,13 @@ async def handle_voice_audio(
     target: VoiceTarget = Form(default="phone"),
     client_id: str | None = Form(default=None),
 ):
+    total_start = time.perf_counter()
+
     if target == "tv" and session_id:
         if not session_manager.can_client_record_on_tv(session_id, client_id):
             status = session_manager.get_client_status(session_id, client_id)
+
+            print(f"VOICE AUDIO_REJECTED_TOTAL_TIME={time.perf_counter() - total_start:.2f}s")
 
             return VoiceResponse(
                 session_id=session_id,
@@ -250,13 +326,28 @@ async def handle_voice_audio(
     filepath = UPLOAD_DIR / filename
 
     try:
+        upload_start = time.perf_counter()
+
         with open(filepath, "wb") as buffer:
             buffer.write(await file.read())
+
+        print(
+            "VOICE UPLOAD:",
+            {
+                "filename": filename,
+                "size_bytes": filepath.stat().st_size if filepath.exists() else None,
+                "upload_time": round(time.perf_counter() - upload_start, 2),
+            },
+        )
 
         if session_id:
             await _broadcast_state(session_id, "thinking", {"target": target})
 
+        stt_start = time.perf_counter()
         transcript = await run_in_threadpool(transcribe_audio, str(filepath))
+        print(f"VOICE STT_TIME={time.perf_counter() - stt_start:.2f}s")
+
+        process_start = time.perf_counter()
 
         result = await run_in_threadpool(
             process_question,
@@ -265,6 +356,8 @@ async def handle_voice_audio(
             target,
         )
 
+        print(f"VOICE PROCESS_THREAD_TIME={time.perf_counter() - process_start:.2f}s")
+
         if session_id:
             await _broadcast_voice_response(
                 session_id,
@@ -272,13 +365,20 @@ async def handle_voice_audio(
                 result.answer_audio_url,
             )
 
+        print(f"VOICE AUDIO_ENDPOINT_TOTAL_TIME={time.perf_counter() - total_start:.2f}s")
+
         return result
 
     except Exception as error:
         print("VOICE AUDIO ERROR:", repr(error))
 
         message = "Nie usłyszałem pytania, spróbuj jeszcze raz."
-        audio_url = await run_in_threadpool(generate_speech, message, target)
+        message = limit_answer_for_voice(message)
+        audio_url = await run_in_threadpool(
+            generate_speech_with_timing,
+            message,
+            target,
+        )
 
         result = VoiceResponse(
             transcript="",
@@ -297,6 +397,8 @@ async def handle_voice_audio(
                 target,
                 audio_url,
             )
+
+        print(f"VOICE AUDIO_ERROR_TOTAL_TIME={time.perf_counter() - total_start:.2f}s")
 
         return result
 
