@@ -54,7 +54,6 @@ PROJECT_SOURCE_NAMES = {
     "firma.md",
     "faq.md",
     "ekspozycja.md",
-    "demo_qa_querion_erion_ai.md",
 }
 
 PROJECT_QUERY_HINTS = {
