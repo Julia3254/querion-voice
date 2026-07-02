@@ -1,24 +1,80 @@
-# FAQ – podstawowe odpowiedzi
+# FAQ – krótkie odpowiedzi organizacyjne
 
-Ten plik zawiera krótkie odpowiedzi, których asystent może używać w rozmowie. Odpowiedzi powinny być naturalne, głosowe i niezbyt długie.
+Ten plik zawiera krótkie odpowiedzi na najczęstsze pytania o Querion. Odpowiedzi powinny być naturalne, głosowe i niezbyt długie.
 
 # Czym jest Querion?
 
-Querion to hipermedialny park rozrywki w Karkonoszach. Łączy technologię, immersyjne doświadczenia, interaktywność i świat wyobraźni.
+Querion to hipermedialny park rozrywki w Karkonoszach. Łączy technologię, immersyjne doświadczenia, interaktywność, sztuczną inteligencję i świat wyobraźni.
 
-# Dla kogo jest Querion?
+# Gdzie znajduje się Querion?
 
-Querion jest dla rodzin, dzieci, młodzieży, dorosłych, turystów i grup szkolnych. To miejsce dla osób, które lubią nowe doświadczenia, technologię i zabawę.
+Querion znajduje się przy ul. Polnej 4 w Piechowicach, w Karkonoszach, między Szklarską Porębą a Jelenią Górą.
+
+# Jaki jest adres Querionu?
+
+Adres Querionu to ul. Polna 4, 58-573 Piechowice.
+
+# Jakie są godziny otwarcia?
+
+Querion jest otwarty codziennie od 10:00 do 22:00.
+
+# Czy Querion jest otwarty w weekend?
+
+Tak, Querion jest otwarty codziennie, także w weekendy, w godzinach 10:00–22:00.
+
+# Ile kosztuje bilet?
+
+Bilety zaczynają się od 19 zł. Przykładowo: VR kosztuje 19 zł, Sim Racing 29 zł, Circulum 360° 59 zł, Flying Theater 79 zł, a promocja Querion + Flying Theater 99 zł.
+
+# Jakie są ceny biletów?
+
+Aktualny cennik obejmuje między innymi VR za 19 zł, Sim Racing za 29 zł, Circulum 360° za 59 zł, Flying Theater za 79 zł i promocję Querion + Flying Theater za 99 zł.
+
+# Ile kosztuje VR?
+
+Bilet VR kosztuje 19 zł i daje dostęp do strefy VR oraz części wspólnych parku w dniu wizyty.
+
+# Ile kosztuje Circulum 360?
+
+Bilet Circulum 360° kosztuje 59 zł. To interaktywna karuzela 360°, a czas atrakcji to około 15 minut.
+
+# Ile kosztuje Flying Theater?
+
+Bilet Flying Theater kosztuje 79 zł, a w promocji z biletem Querion + Flying Theater cena wynosi 99 zł.
+
+# Ile kosztuje Sim Racing?
+
+Sim Racing kosztuje 29 zł. Według informacji Querionu ta atrakcja jest dostępna wyłącznie w sprzedaży na miejscu.
+
+# Czy można kupić bilet na miejscu?
+
+Tak, bilety są dostępne online oraz na miejscu w kasie. Przed wizytą warto sprawdzić aktualną dostępność.
+
+# Czy bilety są online?
+
+Tak, bilety można kupić online przez sklep Querionu oraz na miejscu w kasie.
+
+# Czy ceny mogą się zmienić?
+
+Tak, ceny i promocje mogą się zmieniać. Przed zakupem warto sprawdzić aktualny cennik na oficjalnej stronie Querionu.
+
+# Czy jest parking?
+
+Przy Querionie przewidziano parking dla samochodów i autokarów. Szczegóły zasad warto sprawdzić w regulaminie parkingu.
+
+# Czy można wejść z psem?
+
+Nie mam tej informacji w bazie. Najlepiej sprawdzić aktualny regulamin Querionu albo zapytać obsługę.
+
+# Czy Querion jest dla dzieci?
+
+Tak, Querion może być ciekawy dla dzieci, rodzin i dorosłych, zwłaszcza osób ciekawych technologii, multimediów i AI.
 
 # Co można robić w Querionie?
 
 Można odkrywać atrakcje multimedialne, doświadczać obrazu, dźwięku, ruchu, efektów specjalnych i interakcji z technologią.
 
-# Czym jest AI Touch?
-
-AI Touch to część związana ze sztuczną inteligencją. Pokazuje, że AI może rozumieć pytania, odpowiadać głosem i pomagać w odkrywaniu informacji.
-
-# Czy mogę rozmawiać z avatarem?
+# Czy można rozmawiać z avatarem?
 
 Tak. Użytkownik może mówić do mikrofonu, a system rozpoznaje pytanie, generuje odpowiedź i odtwarza ją głosowo.
 
@@ -26,96 +82,18 @@ Tak. Użytkownik może mówić do mikrofonu, a system rozpoznaje pytanie, generu
 
 Najpierw system nagrywa pytanie. Potem zamienia mowę na tekst, przygotowuje odpowiedź i odtwarza ją głosem.
 
-# Czy AI naprawdę rozumie?
+# Kim jest Quera?
 
-AI analizuje tekst i kontekst, a potem tworzy odpowiedź na podstawie wzorców i bazy wiedzy. Nie rozumie świata tak jak człowiek, ale potrafi bardzo dobrze pomagać w rozmowie.
+Quera to głosowa asystentka Querionu w wersji mobilnej na telefonie.
 
-# Czy AI może się mylić?
+# Kim jest Erion?
 
-Tak. AI może się mylić, dlatego asystent powinien odpowiadać na podstawie przygotowanej bazy wiedzy i nie udawać pewności, jeśli nie zna odpowiedzi.
+Erion to cyfrowy avatar i głosowy asystent Querionu widoczny na ekranie TV.
 
-# O czym mogę zapytać?
+# Co zrobić, jeśli asystent nie zna odpowiedzi?
 
-Możesz zapytać o Querion, atrakcje, AI, działanie avatara, ciekawostki technologiczne, lifestyle, naukę, podróże, kreatywność i codzienne użycie AI.
-
-# O czym asystent nie powinien odpowiadać?
-
-Asystent nie powinien udzielać porad medycznych, prawnych, finansowych ani podawać niepewnych informacji jako faktów.
-
-Nie powinien też wymyślać szczegółów o cenach, biletach, godzinach otwarcia lub regulaminie, jeśli nie ma ich w bazie wiedzy.
-
-# Co robić, jeśli model nie zna odpowiedzi?
-
-Jeśli model nie zna odpowiedzi, powinien powiedzieć krótko, że nie ma tej informacji w bazie wiedzy.
-
-Może zaproponować, że opowie o Querionie, AI albo dostępnych atrakcjach.
-
-# Przykład fallbacku
-
-Przykro mi, nie jestem biegły w tym temacie, więc nie odpowiem ci na to pytanie.
+Jeśli pytanie dotyczy szczegółów organizacyjnych, których nie ma w bazie, asystent powinien powiedzieć krótko, że nie ma tej informacji i najlepiej sprawdzić ją na oficjalnej stronie albo u obsługi.
 
 # Jak powinien odpowiadać model?
 
-Model powinien odpowiadać krótko, naturalnie i głosowo. Najlepiej 2–3 zdania.
-
-Odpowiedź powinna brzmieć jak rozmowa, nie jak tekst z ulotki.
-
-# Jaki ton powinien mieć Erion?
-
-Erion powinien być przyjazny, ciekawy świata i prosty w odbiorze. Może mówić lekko, pozytywnie i z energią.
-
-# Jaki ton powinna mieć Quera?
-
-Quera powinna brzmieć spokojnie, ciepło i kompetentnie. Może prowadzić użytkownika przez świat Querionu i odpowiadać w jasny sposób.
-
-# Czy odpowiedzi mogą być długie?
-
-Nie. W rozmowie głosowej najlepsze są krótkie odpowiedzi. Jeśli użytkownik chce więcej, może dopytać.
-
-# Czy można zadawać pytania o AI?
-
-Tak. Asystent może wyjaśniać podstawowe pojęcia AI, mówić ciekawostki i tłumaczyć, jak działa rozpoznawanie głosu, generowanie odpowiedzi i avatar.
-
-# Czy można pytać o lifestyle?
-
-Tak. Można pytać o organizację dnia, naukę, podróże, kreatywność, technologię w życiu codziennym i bezpieczne korzystanie z AI.
-
-# Czy kilka osób może rozmawiać na telefonie jednocześnie?
-
-Tak. Wersja telefoniczna może tworzyć osobną sesję dla każdego użytkownika. Dzięki temu kilka osób może prowadzić niezależne rozmowy na swoich telefonach.
-
-# Jak mówić o bezpieczeństwie AI?
-
-Najprościej: AI jest pomocnym narzędziem, ale warto korzystać z niego rozsądnie. Nie należy podawać prywatnych danych i dobrze jest sprawdzać ważne informacje.
-
-# Co powiedzieć dziecku o AI?
-
-AI to cyfrowy pomocnik, który potrafi odpowiadać na pytania. Nie jest człowiekiem i czasem może się pomylić, ale może pomóc w nauce i zabawie.
-
-# Co powiedzieć dorosłemu o AI?
-
-AI może pomagać w pracy, nauce, organizacji informacji, podróżach i kreatywnym myśleniu. Najlepiej traktować je jako wsparcie, nie jako zastępstwo decyzji człowieka.
-
-# Co wyróżnia doświadczenie głosowe?
-
-Doświadczenie głosowe jest naturalne, bo użytkownik nie musi pisać. Może po prostu zapytać, usłyszeć odpowiedź i obserwować animację avatara.
-
-# Co wyróżnia avatara?
-
-Avatar sprawia, że rozmowa z AI wygląda bardziej żywo. Reaguje animacją, dzięki czemu rozmowa wygląda bardziej naturalnie.
-
-# Krótka odpowiedź o Querionie
-
-Querion to hipermedialny park rozrywki w Karkonoszach, który łączy technologię, immersję i interaktywną zabawę. To miejsce, w którym można wejść do świata wyobraźni i nowoczesnych doświadczeń.
-
-# Krótka odpowiedź o AI
-
-AI to technologia, która potrafi analizować pytania i tworzyć odpowiedzi. W tym projekcie pomaga rozmawiać z avatarem głosowo.
-
-# Krótka odpowiedź o Erionie
-
-Erion to głosowy towarzysz na telefonie. Możesz zabrać go ze sobą, zadać pytanie i usłyszeć odpowiedź.
-
-# Krótka odpowiedź o Querze
-
-Quera to głosowa postać na ekranie TV. Możesz połączyć telefon jako mikrofon i porozmawiać z nią głosowo.
+Model powinien odpowiadać krótko, naturalnie i głosowo. Najlepiej jedno do trzech krótkich zdań.
