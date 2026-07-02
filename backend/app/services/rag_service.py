@@ -49,27 +49,12 @@ BRAND_ALIASES = {
     "erionie": "erion",
 }
 
-LIFESTYLE_QUERY_HINTS = {
-    "lifestyle", "wellbeing", "samopoczucie", "nastrój", "nastroj", "humor",
-    "nawyk", "nawyki", "dzień", "dzien", "poranek", "wieczór", "wieczor",
-    "odpoczynek", "odpocząć", "odpoczac", "relaks", "sen", "spanie", "spać", "spac",
-    "zasnąć", "zasnac", "bezsenność", "bezsennosc", "budzić", "budzic",
-    "regeneracja", "energia", "zmęczenie", "zmeczenie", "zmęczony", "zmeczony",
-    "zmęczona", "zmeczona", "ruch", "spacer", "aktywność", "aktywnosc",
-    "ćwiczenia", "cwiczenia", "przerwa", "woda", "nawodnienie", "jedzenie",
-    "dieta", "posiłek", "posilek", "stres", "spokój", "spokoj", "oddech",
-    "koncentracja", "skupienie", "produktywność", "produktywnosc", "motywacja",
-    "kreatywność", "kreatywnosc", "organizacja", "plan", "planowanie",
-    "rutyna", "nauka", "uczyć", "uczyc", "szkoła", "szkola", "praca",
-    "obowiązki", "obowiazki", "czas", "telefon", "ekran", "powiadomienia",
-    "social", "media", "cyfrowy", "przebodźcowanie", "przebodzcowanie",
-}
-
-AI_QUERY_HINTS = {
-    "ai", "sztuczna", "sztucznej", "inteligencja", "inteligencji", "model", "chatbot",
-    "gpt", "rag", "baza", "wiedza", "ciekawostka", "ciekawostkę", "ciekawostke",
-    "technologia", "robot", "algorytm", "automatyzacja", "uczenie", "maszynowe",
-    "neuronowa", "neuronowe", "turing", "prompt", "dane",
+PROJECT_SOURCE_NAMES = {
+    "rdzen_asystenta.md",
+    "firma.md",
+    "faq.md",
+    "ekspozycja.md",
+    "demo_qa_querion_erion_ai.md",
 }
 
 PROJECT_QUERY_HINTS = {
@@ -89,6 +74,8 @@ PROJECT_QUERY_HINTS = {
     "godziny", "otwarte", "otwarcie",
     "parking", "pies", "psem", "dostępność", "dostepnosc",
     "klient", "partner", "demo", "instalacja",
+    "atrakcja", "atrakcje", "lokalizacja", "adres",
+    "quera", "erion", "querion",
 }
 
 VOICE_QUERY_HINTS = {
@@ -107,18 +94,6 @@ VOICE_QUERY_PHRASES = {
     "co potrafisz",
     "kim jesteś", "kim jestes",
     "jak mam zacząć", "jak mam zaczac",
-}
-
-TOPIC_HINTS: dict[str, set[str]] = {
-    "sleep": {"sen", "spanie", "regeneracja", "wieczor", "wieczór", "zmęczenie", "zmeczenie", "energia"},
-    "movement": {"ruch", "spacer", "aktywność", "aktywnosc", "ćwiczenia", "cwiczenia", "przerwa", "siedzenie"},
-    "stress": {"stres", "napięcie", "napiecie", "oddech", "spokój", "spokoj", "relaks", "emocje"},
-    "nutrition": {"jedzenie", "dieta", "posiłek", "posilek", "woda", "energia", "odżywianie", "odzywianie"},
-    "small_changes": {"nawyk", "nawyki", "rutyna", "zmiana", "motywacja", "krok", "zacząć", "zaczac"},
-    "digital_wellbeing": {"telefon", "ekran", "powiadomienia", "cyfrowy", "skupienie", "technologia"},
-    "ai": AI_QUERY_HINTS,
-    "project": PROJECT_QUERY_HINTS | VOICE_QUERY_HINTS,
-    "lifestyle": LIFESTYLE_QUERY_HINTS,
 }
 
 
@@ -200,21 +175,14 @@ def _query_category(question: str) -> str:
     normalized = _normalize(question)
     query_tokens = _tokens(question)
 
-    # Najpierw konkretne pytania o Querion / Eriona / wystawę.
-    # Dzięki BRAND_ALIASES pytania o Kwerion, Kłerion, Qwerion itd.
-    # będą rozumiane jako pytania o Querion.
     if _contains_any(normalized, PROJECT_QUERY_HINTS):
         return "project"
 
-    # Pytania o samą rozmowę z avatarem też traktujemy jako projekt.
     if _contains_any(normalized, VOICE_QUERY_PHRASES):
         return "project"
 
-    if _token_overlap(query_tokens, AI_QUERY_HINTS) or _contains_any(normalized, AI_QUERY_HINTS):
-        return "ai"
-
-    if _token_overlap(query_tokens, LIFESTYLE_QUERY_HINTS) or _contains_any(normalized, LIFESTYLE_QUERY_HINTS):
-        return "lifestyle"
+    if _token_overlap(query_tokens, PROJECT_QUERY_HINTS | VOICE_QUERY_HINTS):
+        return "project"
 
     return "general"
 
@@ -222,29 +190,11 @@ def _query_category(question: str) -> str:
 def _guess_topic(filename: str, title: str, content: str) -> str:
     text = _normalize(f"{filename} {title} {content[:500]}")
 
-    if _contains_any(text, PROJECT_QUERY_HINTS | VOICE_QUERY_HINTS):
+    if filename in PROJECT_SOURCE_NAMES:
         return "project"
 
-    if _contains_any(text, AI_QUERY_HINTS):
-        return "ai"
-
-    if _contains_any(text, {"telefon", "ekran", "powiadomienia", "cyfrowy", "technologia"}):
-        return "digital_wellbeing"
-
-    if _contains_any(text, {"sen", "spanie", "regeneracja", "bezsennosc"}):
-        return "sleep"
-
-    if _contains_any(text, {"stres", "relaks", "oddech", "spokoj", "napiecie"}):
-        return "stress"
-
-    if _contains_any(text, {"ruch", "spacer", "aktywnosc", "cwiczenia"}):
-        return "movement"
-
-    if _contains_any(text, {"jedzenie", "dieta", "posilek", "woda", "odzywianie"}):
-        return "nutrition"
-
-    if _contains_any(text, LIFESTYLE_QUERY_HINTS):
-        return "lifestyle"
+    if _contains_any(text, PROJECT_QUERY_HINTS | VOICE_QUERY_HINTS):
+        return "project"
 
     return "general"
 
@@ -263,6 +213,7 @@ def _split_markdown_sections(text: str, source_name: str, source_type: str) -> l
             return
 
         topic = _guess_topic(source_name, current_title, content)
+
         sections.append(
             RagSection(
                 source_type=source_type,
@@ -286,6 +237,7 @@ def _split_markdown_sections(text: str, source_name: str, source_type: str) -> l
 
     if not sections and text.strip():
         topic = _guess_topic(source_name, "Informacje", text)
+
         sections.append(
             RagSection(
                 source_type=source_type,
@@ -308,6 +260,9 @@ def _load_raw_sections() -> tuple[RagSection, ...]:
         return tuple()
 
     for path in sorted(RAW_DIR.glob("*.md")):
+        if path.name not in PROJECT_SOURCE_NAMES:
+            continue
+
         try:
             text = path.read_text(encoding="utf-8")
         except Exception as error:
@@ -333,7 +288,12 @@ def _load_internet_markdown_sections() -> tuple[RagSection, ...]:
             print("RAG INTERNET MD READ ERROR:", path, repr(error))
             continue
 
-        sections.extend(_split_markdown_sections(text, path.name, "internet"))
+        parsed_sections = _split_markdown_sections(text, path.name, "internet")
+        sections.extend(
+            section
+            for section in parsed_sections
+            if section.topic == "project"
+        )
 
     return tuple(sections)
 
@@ -372,6 +332,9 @@ def _sections_from_cache_payload(payload: Any, source_name: str) -> list[RagSect
 
                 source_url = str(item.get("url") or item.get("source_url") or "")
                 topic = _guess_topic(source_name, title, content)
+
+                if topic != "project":
+                    continue
 
                 sections.append(
                     RagSection(
@@ -426,9 +389,7 @@ def _score_section(question: str, section: RagSection) -> int:
     )
     searchable_tokens = _tokens(searchable)
 
-    category = _query_category(question)
     score = 0
-
     token_list = list(query_tokens)
 
     for token in token_list:
@@ -443,48 +404,14 @@ def _score_section(question: str, section: RagSection) -> int:
         if phrase in searchable:
             score += 8
 
-    topic_hints = TOPIC_HINTS.get(section.topic, set())
+    if section.source_name in PROJECT_SOURCE_NAMES:
+        score += 8
 
-    if topic_hints and _token_overlap(query_tokens, topic_hints):
-        score += 20
-
-    if category == "project":
-        if section.topic == "project" or section.source_name in {
-            "firma.md",
-            "ekspozycja.md",
-            "faq.md",
-            "rdzen_asystenta.md",
-            "demo_qa_querion_erion_ai.md",
-        }:
-            score += 30
-
-        if section.source_type == "internet" and section.topic not in {"ai", "digital_wellbeing"}:
-            score -= 10
-
-    elif category == "lifestyle":
-        if section.topic in {
-            "lifestyle",
-            "movement",
-            "sleep",
-            "stress",
-            "nutrition",
-            "small_changes",
-            "digital_wellbeing",
-        }:
-            score += 28
-
-        if section.source_type == "internet":
-            score += 8
-
-    elif category == "ai":
-        if (
-            section.topic == "ai"
-            or "ai" in _normalize(section.source_name)
-            or "ciekawostki" in _normalize(section.source_name)
-        ):
-            score += 28
+    if section.topic == "project":
+        score += 8
 
     score += max(0, min(section.priority, 10))
+
     return score
 
 
@@ -501,53 +428,36 @@ def _format_context(sections: list[RagSection]) -> str:
     return "\n\n---\n\n".join(parts)
 
 
+def _empty_context(category: str) -> Dict[str, object]:
+    return {
+        "has_context": False,
+        "context": "",
+        "sources": [],
+        "category": category,
+        "internet_cache_used": bool(_load_internet_cache_sections()),
+    }
+
+
 def get_context_for_question(question: str) -> Dict[str, object]:
     category = _query_category(question)
+
+    if category != "project":
+        return _empty_context(category)
 
     raw_sections = list(_load_raw_sections())
     internet_sections = list(_load_internet_cache_sections()) + list(_load_internet_markdown_sections())
 
     min_score = int(getattr(settings, "RAG_MIN_SCORE", 1) or 1)
+    min_score = max(min_score, 12)
+
     max_sections = int(getattr(settings, "RAG_MAX_SECTIONS", 4) or 4)
     max_context_chars = int(getattr(settings, "RAG_MAX_CONTEXT_CHARS", 3500) or 3500)
 
-    candidate_sections: list[RagSection] = []
-
-    if category == "project":
-        candidate_sections = raw_sections + [
-            section
-            for section in internet_sections
-            if section.topic in {"ai", "digital_wellbeing"}
-        ]
-
-    elif category == "lifestyle":
-        candidate_sections = [
-            section
-            for section in internet_sections + raw_sections
-            if section.topic in {
-                "lifestyle",
-                "movement",
-                "sleep",
-                "stress",
-                "nutrition",
-                "small_changes",
-                "digital_wellbeing",
-            }
-        ]
-
-    elif category == "ai":
-        candidate_sections = [
-            section
-            for section in internet_sections + raw_sections
-            if section.topic == "ai"
-            or "ai" in _normalize(section.source_name)
-            or "ciekawostki" in _normalize(section.source_name)
-        ]
-
-    else:
-        # Dla zwykłych pytań ogólnych RAG nie jest wymagany.
-        # Możemy dać kontekst, jeśli przypadkiem pasuje, ale brak kontekstu nie blokuje modelu.
-        candidate_sections = raw_sections + internet_sections
+    candidate_sections: list[RagSection] = [
+        section
+        for section in raw_sections + internet_sections
+        if section.topic == "project" or section.source_name in PROJECT_SOURCE_NAMES
+    ]
 
     scored: list[tuple[int, RagSection]] = []
 
@@ -575,13 +485,7 @@ def get_context_for_question(question: str) -> Dict[str, object]:
         selected.append(section)
 
     if not selected:
-        return {
-            "has_context": False,
-            "context": "",
-            "sources": [],
-            "category": category,
-            "internet_cache_used": bool(_load_internet_cache_sections()),
-        }
+        return _empty_context(category)
 
     context = _format_context(selected)
 
