@@ -9,6 +9,11 @@ import type {
   VoiceTarget,
 } from "../types/api";
 
+export const WIFI_ACCESS_DENIED_EVENT = "quera:wifi-access-denied";
+
+const WIFI_ACCESS_DENIED_MESSAGE =
+  "Aby korzystać z aplikacji, połącz się z WiFi Quera.";
+
 function cleanBaseUrl(url: string) {
   return url.trim().replace(/\/$/, "");
 }
@@ -35,6 +40,7 @@ function wsBaseUrl() {
   }
 
   const protocol = window.location.protocol === "https:" ? "wss" : "ws";
+
   return `${protocol}://${window.location.hostname}:8000`;
 }
 
@@ -42,13 +48,66 @@ function apiUrl(path: string) {
   return `${apiBaseUrl()}${path}`;
 }
 
+function notifyWifiAccessDenied(message = WIFI_ACCESS_DENIED_MESSAGE) {
+  if (typeof window === "undefined") {
+    return;
+  }
+
+  window.dispatchEvent(
+    new CustomEvent(WIFI_ACCESS_DENIED_EVENT, {
+      detail: {
+        message,
+      },
+    }),
+  );
+}
+
+function extractErrorMessage(text: string, fallback: string) {
+  if (!text) {
+    return fallback;
+  }
+
+  try {
+    const parsed = JSON.parse(text) as {
+      detail?: unknown;
+      message?: unknown;
+    };
+
+    if (typeof parsed.detail === "string") {
+      return parsed.detail;
+    }
+
+    if (typeof parsed.message === "string") {
+      return parsed.message;
+    }
+  } catch {
+  }
+
+  return text || fallback;
+}
+
+function handleFailedResponse(
+  response: Response,
+  text: string,
+  fallbackMessage: string,
+) {
+  const message = extractErrorMessage(text, fallbackMessage);
+
+  if (response.status === 403) {
+    notifyWifiAccessDenied(WIFI_ACCESS_DENIED_MESSAGE);
+    throw new Error(WIFI_ACCESS_DENIED_MESSAGE);
+  }
+
+  throw new Error(message);
+}
+
 async function fetchJson<T>(
   path: string,
   init: RequestInit = {},
-  errorMessage: string
+  errorMessage: string,
 ): Promise<T> {
   const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 20000);
+  const timeout = window.setTimeout(() => controller.abort(), 20000);
 
   try {
     const url = apiUrl(path);
@@ -63,12 +122,12 @@ async function fetchJson<T>(
 
     if (!response.ok) {
       const text = await response.text();
-      throw new Error(text || errorMessage);
+      handleFailedResponse(response, text, errorMessage);
     }
 
-    return response.json();
+    return (await response.json()) as T;
   } finally {
-    clearTimeout(timeout);
+    window.clearTimeout(timeout);
   }
 }
 
@@ -85,6 +144,7 @@ function createSafeClientId(): string {
     typeof crypto.getRandomValues === "function"
   ) {
     const values = new Uint32Array(4);
+
     crypto.getRandomValues(values);
 
     return Array.from(values)
@@ -108,6 +168,7 @@ export function getClientId(): string {
   }
 
   const created = createSafeClientId();
+
   window.localStorage.setItem(key, created);
 
   return created;
@@ -116,85 +177,104 @@ export function getClientId(): string {
 export async function createPhoneSession(): Promise<CreateSessionResponse> {
   return fetchJson<CreateSessionResponse>(
     "/sessions/phone",
-    { method: "POST" },
-    "Nie udało się utworzyć sesji telefonu."
+    {
+      method: "POST",
+    },
+    "Nie udało się utworzyć sesji telefonu.",
   );
 }
 
 export async function createTvSession(): Promise<CreateSessionResponse> {
   return fetchJson<CreateSessionResponse>(
     "/sessions/tv",
-    { method: "POST" },
-    "Nie udało się utworzyć sesji TV."
+    {
+      method: "POST",
+    },
+    "Nie udało się utworzyć sesji TV.",
   );
 }
 
 export async function joinTvSession(
   sessionId: string,
-  clientId: string
+  clientId: string,
 ): Promise<JoinTvSessionResponse> {
   return fetchJson<JoinTvSessionResponse>(
     `/sessions/tv/${sessionId}/join`,
     {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ client_id: clientId }),
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        client_id: clientId,
+      }),
     },
-    "Nie udało się połączyć z TV."
+    "Nie udało się połączyć z TV.",
   );
 }
 
 export async function getTvStatus(
   sessionId: string,
-  clientId?: string
+  clientId?: string,
 ): Promise<QueueStatusResponse> {
   const path = clientId
     ? `/sessions/tv/${sessionId}/status?client_id=${encodeURIComponent(
-        clientId
+        clientId,
       )}`
     : `/sessions/tv/${sessionId}/status`;
 
   return fetchJson<QueueStatusResponse>(
     path,
-    { method: "GET" },
-    "Nie udało się pobrać statusu TV."
+    {
+      method: "GET",
+    },
+    "Nie udało się pobrać statusu TV.",
   );
 }
 
 export async function getSessionResponse(
   sessionId: string,
-  lastResponseId: number
+  lastResponseId: number,
 ): Promise<SessionResponseStatus> {
   return fetchJson<SessionResponseStatus>(
     `/sessions/${sessionId}/response?last_response_id=${lastResponseId}`,
-    { method: "GET" },
-    "Nie udało się pobrać odpowiedzi sesji."
+    {
+      method: "GET",
+    },
+    "Nie udało się pobrać odpowiedzi sesji.",
   );
 }
 
 export async function completeTvTurn(
-  sessionId: string
+  sessionId: string,
 ): Promise<QueueStatusResponse> {
   return fetchJson<QueueStatusResponse>(
     `/sessions/tv/${sessionId}/complete`,
-    { method: "POST" },
-    "Nie udało się zakończyć tury TV."
+    {
+      method: "POST",
+    },
+    "Nie udało się zakończyć tury TV.",
   );
 }
 
 export async function setSessionState(
   sessionId: string,
   state: AvatarState,
-  target?: VoiceTarget
+  target?: VoiceTarget,
 ): Promise<void> {
   await fetchJson<{ session_id: string; state: AvatarState }>(
     `/sessions/${sessionId}/state`,
     {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ state, target }),
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        state,
+        target,
+      }),
     },
-    "Nie udało się zmienić stanu sesji."
+    "Nie udało się zmienić stanu sesji.",
   );
 }
 
@@ -205,10 +285,9 @@ export async function sendVoiceAudio(
     sessionId?: string | null;
     target?: VoiceTarget;
     clientId?: string | null;
-  } = {}
+  } = {},
 ): Promise<VoiceResponse> {
   const formData = new FormData();
-
   const mimeType = options.mimeType ?? audioBlob.type;
 
   let filename = "recording.webm";
@@ -243,27 +322,33 @@ export async function sendVoiceAudio(
 
   if (!response.ok) {
     const text = await response.text();
-    throw new Error(text || "Błąd podczas wysyłania audio.");
+
+    handleFailedResponse(response, text, "Błąd podczas wysyłania audio.");
   }
 
-  return response.json();
+  return (await response.json()) as VoiceResponse;
 }
 
 export async function getIdleVoice(
-  options: { sessionId?: string | null; target?: VoiceTarget } = {}
+  options: {
+    sessionId?: string | null;
+    target?: VoiceTarget;
+  } = {},
 ): Promise<VoiceResponse> {
   return fetchJson<VoiceResponse>(
     "/voice/idle",
     {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        "Content-Type": "application/json",
+      },
       body: JSON.stringify({
         text: "idle",
         session_id: options.sessionId ?? null,
         target: options.target ?? "tv",
       }),
     },
-    "Nie udało się pobrać zwrotu idle."
+    "Nie udało się pobrać zwrotu idle.",
   );
 }
 
@@ -289,7 +374,7 @@ export function buildAudioSrc(result: VoiceResponse): string | null {
 
 export function connectSessionEvents(
   sessionId: string,
-  onEvent: (event: SessionEvent) => void
+  onEvent: (event: SessionEvent) => void,
 ): WebSocket {
   const socket = new WebSocket(`${wsBaseUrl()}/sessions/${sessionId}/events`);
 
@@ -297,7 +382,6 @@ export function connectSessionEvents(
     try {
       onEvent(JSON.parse(message.data) as SessionEvent);
     } catch {
-      // Ignorujemy niepoprawne eventy.
     }
   };
 
@@ -309,6 +393,12 @@ export function connectSessionEvents(
         window.clearInterval(interval);
       }
     }, 20000);
+  };
+
+  socket.onclose = (event) => {
+    if (event.code === 1008) {
+      notifyWifiAccessDenied(WIFI_ACCESS_DENIED_MESSAGE);
+    }
   };
 
   socket.onerror = (error) => {
