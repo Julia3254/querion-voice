@@ -22,7 +22,10 @@ def _load_system_prompt() -> str:
     if SYSTEM_PROMPT_PATH.exists():
         return SYSTEM_PROMPT_PATH.read_text(encoding="utf-8")
 
-    return "Jesteś głosowym asystentem Querionu. Twoja persona zależy od trybu: TV to Erion, telefon to Quera."
+    return (
+        "Jesteś głosowym asystentem Querionu. "
+        "Twoja persona zależy od trybu: TV to Erion, telefon to Quera."
+    )
 
 
 def _persona_for_target(target: str | None) -> dict[str, str]:
@@ -40,10 +43,10 @@ def _persona_for_target(target: str | None) -> dict[str, str]:
 
     return {
         "name": "Quera",
-        "role": "mobilna głosowa asystentka Querionu na telefonie",
+        "role": "głosowa asystentka Querionu w telefonie",
         "intro": (
-            "Jestem Quera, mobilna głosowa asystentka Querionu. "
-            "Możesz zabrać mnie ze sobą na telefonie i zadawać mi pytania głosowo."
+            "Jestem Quera, głosowa asystentka Querionu w telefonie. "
+            "Możesz zadawać mi pytania głosowo i usłyszeć krótką odpowiedź."
         ),
     }
 
@@ -90,11 +93,19 @@ def _normalize_for_rules(text: str) -> str:
         "queryon": "querion",
         "kwirion": "querion",
         "klirion": "querion",
+        "querionie": "querion",
+        "querionu": "querion",
+        "querionem": "querion",
         "kwera": "quera",
         "qera": "quera",
         "klera": "quera",
+        "quere": "quera",
+        "querze": "quera",
         "eryon": "erion",
         "erjon": "erion",
+        "erionie": "erion",
+        "eriona": "erion",
+        "erionem": "erion",
     }
 
     words = text.split()
@@ -123,6 +134,7 @@ def _fallback_from_context(context: str) -> str:
 
 def _answer_persona_question(user_text: str, target: str | None) -> str | None:
     normalized = _normalize_for_rules(user_text)
+    tokens = set(normalized.split())
     persona = _persona_for_target(target)
 
     asks_about_self = any(
@@ -137,22 +149,25 @@ def _answer_persona_question(user_text: str, target: str | None) -> str | None:
         ]
     )
 
-    asks_about_quera = "quera" in normalized
-    asks_about_erion = "erion" in normalized
+    quera_tokens = {"quera"}
+    erion_tokens = {"erion"}
+
+    asks_about_quera = bool(tokens & quera_tokens)
+    asks_about_erion = bool(tokens & erion_tokens)
 
     if asks_about_self:
         return persona["intro"]
 
-    if asks_about_quera:
+    if asks_about_quera and not asks_about_erion:
         return (
-            "Quera to mobilna głosowa asystentka Querionu na telefonie. "
-            "Możesz zabrać ją ze sobą i zadawać jej pytania głosowo."
+            "Quera to głosowa asystentka Querionu w wersji mobilnej na telefonie. "
+            "Możesz zadawać jej pytania głosowo i usłyszeć krótką odpowiedź."
         )
 
-    if asks_about_erion:
+    if asks_about_erion and not asks_about_quera:
         return (
-            "Erion to cyfrowy avatar i głosowy asystent Querionu na ekranie TV. "
-            "Można z nim rozmawiać przez telefon połączony z ekranem."
+            "Erion to cyfrowy avatar i głosowy asystent Querionu widoczny na ekranie TV. "
+            "Reaguje animacją na rozmowę i odpowiada głosowo."
         )
 
     return None
@@ -163,7 +178,6 @@ def _answer_basic_project_question(user_text: str, context: str, target: str | N
     context_normalized = _normalize_for_rules(context)
 
     persona_answer = _answer_persona_question(user_text, target)
-
     if persona_answer:
         return persona_answer
 
@@ -175,15 +189,65 @@ def _answer_basic_project_question(user_text: str, context: str, target: str | N
             "czym sa",
             "opowiedz",
             "co to jest",
-            "czym jest querion",
             "co to querion",
         ]
     ):
-        if "querion" in context_normalized:
+        return (
+            "Querion to hipermedialny park rozrywki w Karkonoszach, który łączy technologię, "
+            "immersyjne doświadczenia, interaktywność, sztuczną inteligencję i świat wyobraźni."
+        )
+
+    if any(fragment in normalized for fragment in ["gdzie", "adres", "lokalizac", "znajduje"]) and "querion" in normalized:
+        return (
+            "Querion znajduje się przy ulicy Polnej 4 w Piechowicach, w Karkonoszach, "
+            "między Szklarską Porębą a Jelenią Górą."
+        )
+
+    if any(fragment in normalized for fragment in ["godzin", "otwar", "otwarte", "weekend"]) and "querion" in normalized:
+        return "Querion jest otwarty codziennie od 10:00 do 22:00."
+
+    if any(fragment in normalized for fragment in ["flying", "theater", "teatr"]) and any(
+        fragment in normalized for fragment in ["koszt", "cena", "bilet", "ile"]
+    ):
+        return (
+            "Bilet na Flying Theater kosztuje 79 zł. "
+            "W promocji z biletem Querion + Flying Theater cena wynosi 99 zł."
+        )
+
+    if any(fragment in normalized for fragment in ["vr"]) and any(
+        fragment in normalized for fragment in ["koszt", "cena", "bilet", "ile"]
+    ):
+        return "Bilet VR kosztuje 19 zł i daje dostęp do strefy VR oraz części wspólnych parku w dniu wizyty."
+
+    if any(fragment in normalized for fragment in ["circulum", "360"]) and any(
+        fragment in normalized for fragment in ["koszt", "cena", "bilet", "ile"]
+    ):
+        return "Bilet Circulum 360° kosztuje 59 zł, a czas atrakcji to około 15 minut."
+
+    if any(fragment in normalized for fragment in ["racing", "sim"]) and any(
+        fragment in normalized for fragment in ["koszt", "cena", "bilet", "ile"]
+    ):
+        return "Sim Racing kosztuje 29 zł. Według informacji Querionu ta atrakcja jest dostępna wyłącznie w sprzedaży na miejscu."
+
+    if any(fragment in normalized for fragment in ["koszt", "cena", "bilet", "ile kosztuje"]) and "querion" in normalized:
+        return (
+            "Bilety zaczynają się od 19 zł. Przykładowo VR kosztuje 19 zł, Sim Racing 29 zł, "
+            "Circulum 360° 59 zł, Flying Theater 79 zł, a promocja Querion + Flying Theater 99 zł."
+        )
+
+    if any(fragment in normalized for fragment in ["atrakcj", "ekspozycj", "co mozna robic", "co jest"]) and (
+        "querion" in normalized or "park" in normalized
+    ):
+        return (
+            "W Querionie są między innymi Flying Theater, Immersive Experience, Cinema 5D, "
+            "Explorer 270°, Circulum 360°, Racing, AI Touch oraz Gift Shop."
+        )
+
+    if any(fragment in normalized for fragment in ["rozmow", "glos", "mikrofon", "avatar", "awatar"]):
+        if "rozmow" in context_normalized or "glos" in context_normalized:
             return (
-                "Querion to interaktywna przestrzeń, która łączy nowoczesną technologię, "
-                "sztuczną inteligencję, multimedia i rozrywkę. To miejsce, w którym można "
-                "doświadczać atrakcji opartych na obrazie, dźwięku, ruchu i interakcji."
+                "Rozmowa głosowa działa tak, że mówisz pytanie do mikrofonu, system zamienia głos na tekst, "
+                "przygotowuje odpowiedź i odtwarza ją głosowo."
             )
 
     return None
@@ -202,37 +266,23 @@ def generate_answer(
     category: str = "general",
     target: str | None = "phone",
 ) -> str:
-    """
-    Generuje krótką odpowiedź głosową.
-
-    Persona:
-    - target="tv" -> Erion
-    - target="phone" -> Quera
-
-    Logika:
-    - project: fakty o Querionie idą przez RAG i nie wolno ich zmyślać,
-    - jeżeli RAG znalazł kontekst projektu, model ma odpowiedzieć z kontekstu,
-    - wszystko inne normalne: model OpenAI odpowiada jak ogólny asystent,
-    - tematy wykluczone są blokowane wcześniej przez exclusion_service.
-    """
     context = (context or "").strip()
     category = (category or "general").strip().lower()
     persona = _persona_for_target(target)
 
     persona_answer = _answer_persona_question(user_text, target)
-
     if persona_answer:
         return persona_answer
 
     if category == "project" and context:
         direct_project_answer = _answer_basic_project_question(user_text, context, target)
-
         if direct_project_answer:
             return direct_project_answer
 
     if not client:
         if context:
             return _fallback_from_context(context)
+
         return get_fallback_response()
 
     system_prompt = _load_system_prompt()
@@ -243,20 +293,11 @@ def generate_answer(
         context_block = "Kontekst z RAG: brak dopasowanego fragmentu."
 
     user_prompt = f"""
-Pytanie użytkownika:
-{user_text}
-
-Rozpoznany tryb:
-{category}
-
-Tryb urządzenia:
-{target}
-
-Aktualna persona:
-{persona["name"]}
-
-Rola persony:
-{persona["role"]}
+Pytanie użytkownika: {user_text}
+Rozpoznany tryb: {category}
+Tryb urządzenia: {target}
+Aktualna persona: {persona["name"]}
+Rola persony: {persona["role"]}
 
 {context_block}
 
@@ -282,7 +323,7 @@ Zasady dla trybu project:
 
 Zasady dla pytań ogólnych:
 - jeśli tryb nie jest project, odpowiedz normalnie z ogólnej wiedzy modelu, nawet jeśli RAG nie znalazł kontekstu,
-- możesz odpowiadać na zwykłe pytania użytkownika o naukę, czas wolny, podróże, lokalne pomysły, technologię, AI, kreatywność, codzienne sprawy, nudę, organizację dnia, rozrywkę i ciekawostki,
+- możesz odpowiadać na zwykłe pytania użytkownika o naukę, czas wolny, podróże, lokalne pomysły, technologię, AI, kreatywność, codzienne sprawy, gotowanie, proste przepisy, nudę, organizację dnia, rozrywkę i ciekawostki,
 - jeśli użytkownik pyta, jak zostałeś stworzony, odpowiedz ogólnie jako {persona["name"]}, że jesteś cyfrowym asystentem opartym o model językowy, rozpoznawanie mowy, syntezę głosu i bazę wiedzy Querionu.
 
 Zasady bezpieczeństwa:
@@ -313,7 +354,6 @@ Zasady bezpieczeństwa:
 
         if category == "project" and context:
             direct_project_answer = _answer_basic_project_question(user_text, context, target)
-
             if direct_project_answer:
                 return direct_project_answer
 
@@ -329,7 +369,6 @@ Zasady bezpieczeństwa:
 
         if category == "project" and context:
             direct_project_answer = _answer_basic_project_question(user_text, context, target)
-
             if direct_project_answer:
                 return direct_project_answer
 

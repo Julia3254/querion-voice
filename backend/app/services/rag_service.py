@@ -21,7 +21,7 @@ STOP_WORDS = {
     "mozesz", "możesz", "prosze", "proszę", "cos", "coś", "by", "byc", "być", "mam",
     "chce", "chcę", "chcialbym", "chciałbym", "albo", "oraz", "od", "po", "jestem",
     "moj", "mój", "moja", "moje", "mogę", "moge", "można", "mozna",
-    "bardzo", "troche", "trochę", "dzis", "dziś",
+    "bardzo", "troche", "trochę", "dzis", "dziś", "są", "sa",
 }
 
 BRAND_ALIASES = {
@@ -39,14 +39,21 @@ BRAND_ALIASES = {
     "queryon": "querion",
     "kwirion": "querion",
     "klirion": "querion",
+    "querionie": "querion",
+    "querionu": "querion",
+    "querionem": "querion",
 
     "kwera": "quera",
     "qera": "quera",
     "klera": "quera",
+    "quere": "quera",
+    "querze": "quera",
 
     "eryon": "erion",
     "erjon": "erion",
     "erionie": "erion",
+    "eriona": "erion",
+    "erionem": "erion",
 }
 
 PROJECT_SOURCE_NAMES = {
@@ -74,7 +81,6 @@ PROJECT_QUERY_HINTS = {
     "parking", "pies", "psem", "dostępność", "dostepnosc",
     "klient", "partner", "demo", "instalacja",
     "atrakcja", "atrakcje", "lokalizacja", "adres",
-    "quera", "erion", "querion",
 }
 
 VOICE_QUERY_HINTS = {
@@ -173,6 +179,38 @@ def _token_overlap(tokens: set[str], hints: set[str]) -> bool:
 def _query_category(question: str) -> str:
     normalized = _normalize(question)
     query_tokens = _tokens(question)
+
+    project_fragments = [
+        "querion",
+        "quera",
+        "erion",
+        "kwerion",
+        "atrakcj",
+        "ekspozycj",
+        "bilet",
+        "cen",
+        "koszt",
+        "godzin",
+        "otwar",
+        "adres",
+        "lokalizac",
+        "parking",
+        "flying theater",
+        "cinema 5d",
+        "circulum",
+        "racing",
+        "ai touch",
+        "avatar",
+        "awatar",
+        "rozmow",
+        "glos",
+        "mikrofon",
+        "piechowic",
+        "karkonosz",
+    ]
+
+    if any(fragment in normalized for fragment in project_fragments):
+        return "project"
 
     if _contains_any(normalized, PROJECT_QUERY_HINTS):
         return "project"
@@ -408,6 +446,42 @@ def _score_section(question: str, section: RagSection) -> int:
 
     if section.topic == "project":
         score += 8
+
+    normalized_question = _normalize(question)
+
+    if any(
+        phrase in normalized_question
+        for phrase in ["czym jest querion", "co to jest querion", "co to querion", "opowiedz o querion"]
+    ):
+        if section.source_name in {"firma.md", "faq.md"}:
+            score += 90
+        if section.source_name == "rdzen_asystenta.md":
+            score -= 30
+
+    if any(fragment in normalized_question for fragment in ["gdzie", "adres", "lokalizac", "znajduje", "piechowic"]):
+        if section.source_name in {"firma.md", "faq.md"}:
+            score += 80
+
+    if any(fragment in normalized_question for fragment in ["godzin", "otwar", "otwarte", "weekend"]):
+        if section.source_name == "faq.md":
+            score += 90
+
+    if any(fragment in normalized_question for fragment in ["koszt", "cena", "bilet", "ile kosztuje"]):
+        if section.source_name == "faq.md":
+            score += 90
+
+    if any(
+        fragment in normalized_question
+        for fragment in ["atrakcj", "ekspozycj", "flying", "cinema", "circulum", "racing", "ai touch", "explorer"]
+    ):
+        if section.source_name == "ekspozycja.md":
+            score += 100
+        if section.source_name == "faq.md":
+            score += 20
+
+    if any(fragment in normalized_question for fragment in ["quera", "erion", "avatar", "awatar", "rozmow", "glos", "mikrofon"]):
+        if section.source_name in {"rdzen_asystenta.md", "faq.md"}:
+            score += 80
 
     score += max(0, min(section.priority, 10))
 
