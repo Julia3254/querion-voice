@@ -1,4 +1,5 @@
 import os
+
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -6,8 +7,10 @@ load_dotenv()
 
 def _int_env(name: str, default: int) -> int:
     value = os.getenv(name)
+
     if not value:
         return default
+
     try:
         return int(value)
     except ValueError:
@@ -16,8 +19,10 @@ def _int_env(name: str, default: int) -> int:
 
 def _float_env(name: str, default: float) -> float:
     value = os.getenv(name)
+
     if not value:
         return default
+
     try:
         return float(value)
     except ValueError:
@@ -26,6 +31,7 @@ def _float_env(name: str, default: float) -> float:
 
 def _bool_env(name: str, default: bool) -> bool:
     value = os.getenv(name)
+
     if not value:
         return default
 
@@ -59,6 +65,13 @@ class Settings:
     RAG_MIN_SCORE: int = _int_env("RAG_MIN_SCORE", 2)
 
     IDLE_TV_COOLDOWN_SECONDS: int = _int_env("IDLE_TV_COOLDOWN_SECONDS", 25)
+
+    IP_ACCESS_CONTROL_ENABLED: bool = _bool_env("IP_ACCESS_CONTROL_ENABLED", False)
+    ALLOWED_WIFI_CIDRS: str = os.getenv(
+        "ALLOWED_WIFI_CIDRS",
+        "176.114.232.224/29,89.174.73.96/29",
+    )
+    IP_ACCESS_ALLOW_PRIVATE: bool = _bool_env("IP_ACCESS_ALLOW_PRIVATE", False)
 
 
 settings = Settings()
